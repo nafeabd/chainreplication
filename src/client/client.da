@@ -1,0 +1,105 @@
+#!/Library/Frameworks/Python.framework/Versions/3.4/bin/python3
+
+import sys
+import re
+class Client(process):
+    def setup(total_pings): pass
+
+    def main():
+        await(len(listof(p, received(('Ping',), from_=p))) == total_pings)
+
+
+class Client_Details:
+
+	def __init__(self,seed,bankname,numReq,probGetBalance,probDeposit,probWithdraw,reply_wait,no_retry):
+		self.seed = seed
+		self.bankname = bankname
+		self.numReq = numReq
+		self.probGetBalance = probGetBalance
+		self.probDeposit = probDeposit
+		self.probWithdraw = probWithdraw
+		self.reply_wait = reply_wait
+		self.no_retry = no_retry
+
+	def displayClientDetails(self):
+		print("--Client details--\n")
+		print("seed:",self.seed)
+		print("bankname:",self.bankname)
+		print("numReq:",self.numReq)
+		print("probGetBal:",self.probGetBalance)
+		print("probGetDeposit:",self.probDeposit)
+		print("probWithdraw:",self.probWithdraw)
+		print("reply_wait:",self.reply_wait)
+		print("no_retry:",self.no_retry)
+class Bank_Details:
+	def __init__(self,bankname,chainlen,no_clients,client):
+		self.bankname = bankname
+		self.chainlen = chainlen
+		self.no_clients = no_clients
+		self.client = client
+
+	def displayBankDetails(self):
+		print("Bankname:",self.bankname)
+		print("chainlen:",self.chainlen)
+		print("no_clients:",self.no_clients)
+		self.client.displayClientDetails()
+		
+def main():
+	
+	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
+	print(config_file)
+	
+	#nrounds = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+	#npings = int(sys.argv[2]) if len(sys.argv) > 2 else 3
+	#config(clock='Lamport')
+	
+	#with open(config_file,'r') as f:
+	bank_list = []
+	f = open(config_file)
+	lines = f.readlines()
+	for line in lines:
+			if len(line.strip()) == 0:
+				continue	
+			if line.startswith('Num_Banks'):
+				num_banks = int(line.strip().split(':')[1])
+			
+			if line.startswith('<Bank-Start>'):
+				continue
+				
+			if line.startswith('Bank_Name:'):
+				bank_name = line.strip().split(':')[1]	
+			
+			if line.startswith('Start_Up_Delay:'):
+				start_up_delay = line.strip().split(':')[1]
+	
+			if line.startswith('Len_of_chain:'):
+                                chain_len = line.strip().split(':')[1]
+			
+			if line.startswith('No_Clients:'):
+                                no_clients = line.strip().split(':')[1]		
+
+
+			if line.startswith('reply_wait:'):
+                                reply_wait = line.strip().split(':')[1]
+
+			if line.startswith('num_retry:'):
+                                num_retry = line.strip().split(':')[1]
+
+			if line.startswith('Random:'):
+				temp = line.strip().split(':')[1]
+				seed,numReq,probgetbal,probgetdep,probgetwithdraw = re.sub(r'[()]','',temp).strip().split(',')
+			if line.startswith('<Bank-End>'):
+				client = Client_Details(seed,bank_name,numReq,probgetbal,probgetdep,probgetwithdraw,reply_wait,num_retry)
+				bank = Bank_Details(bank_name,chain_len,no_clients,client)
+				bank_list.append(bank)
+	f.close()
+	for item in bank_list:
+		item.displayBankDetails()	
+	
+	#pong = new(Pong, [nrounds * npings], num= 1)
+	#ping = new(Ping, num= npings)
+	#setup(ping, [pong, nrounds])
+	#start(pong)
+	#start(ping)
+
+
