@@ -3,10 +3,18 @@
 import sys
 import re
 class Client(process):
-    def setup(total_pings): pass
 
-    def main():
-        await(len(listof(p, received(('Ping',), from_=p))) == total_pings)
+	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry):
+		self.client_id = self.id._address[1]
+		output(client_id)
+		output(bankname)
+		output(seed)
+		output(numreq)
+		output(prob_bal)
+	
+	def main():pass
+		
+        #await(len(listof(p, received(('Ping',), from_=p))) == total_pings)
 
 
 class Client_Details:
@@ -46,9 +54,8 @@ class Bank_Details:
 		
 def main():
 	
-	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
-	print(config_file)
-	
+	#config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
+	config_file = sys.argv[1]
 	#nrounds = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 	#npings = int(sys.argv[2]) if len(sys.argv) > 2 else 3
 	#config(clock='Lamport')
@@ -61,7 +68,7 @@ def main():
 			if len(line.strip()) == 0:
 				continue	
 			if line.startswith('Num_Banks'):
-				num_banks = int(line.strip().split(':')[1])
+				num_banks = line.strip().split(':')[1]
 			
 			if line.startswith('<Bank-Start>'):
 				continue
@@ -76,7 +83,7 @@ def main():
                                 chain_len = line.strip().split(':')[1]
 			
 			if line.startswith('No_Clients:'):
-                                no_clients = line.strip().split(':')[1]		
+                                no_clients = int(line.strip().split(':')[1])		
 
 
 			if line.startswith('reply_wait:'):
@@ -93,8 +100,15 @@ def main():
 				bank = Bank_Details(bank_name,chain_len,no_clients,client)
 				bank_list.append(bank)
 	f.close()
+	#Do validation for no of banks
+	#Create client process for each bank
+	clients_list = []
 	for item in bank_list:
-		item.displayBankDetails()	
+		clients_list.append(new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,
+				item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry],num = item.no_clients))
+		
+	for client in clients_list:
+		start(client)	
 	
 	#pong = new(Pong, [nrounds * npings], num= 1)
 	#ping = new(Ping, num= npings)
