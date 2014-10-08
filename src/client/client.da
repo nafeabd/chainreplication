@@ -3,18 +3,28 @@ import sys
 import re
 class Client(process):
 
-	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry):
+	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry,head,tail):
 		self.client_id = self.id._address[1]
-		output(client_id)
-		output(bankname)
-		output(seed)
-		output(numreq)
-		output(prob_bal)
-	
-	def main():pass
+		output('client id:'+str(client_id))
+		output('BankName:'+bankname)
+		output('Head:'+str(head))
+
+	def main():
+		send(('hi',self.client_id), to=head)
 		
         #await(len(listof(p, received(('Ping',), from_=p))) == total_pings)
 
+class Server(process):
+	
+	def setup(bankname,startupdelay):
+		self.server_id = self.id._address[1]
+		output('Server id '+str(server_id))
+	def main():
+		await(False)
+	def receive(msg=('hi',p)):
+		output("from:"+p)
+		
+		
 
 class Client_Details:
 
@@ -38,23 +48,37 @@ class Client_Details:
 		print("probWithdraw:",self.probWithdraw)
 		print("reply_wait:",self.reply_wait)
 		print("no_retry:",self.no_retry)
+
+
+class Server_Details:
+
+        def __init__(self,startupdelay):
+                self.startupdelay = startupdelay
+
+        def displayServerDetails(self):
+                print("--Server details--\n")
+                print("startupdelay:",self.startupdelay)
+
+
 class Bank_Details:
-	def __init__(self,bankname,chainlen,no_clients,client):
+	def __init__(self,bankname,chainlen,no_clients,client,server):
 		self.bankname = bankname
 		self.chainlen = chainlen
 		self.no_clients = no_clients
 		self.client = client
+		self.server = server
 
 	def displayBankDetails(self):
 		print("Bankname:",self.bankname)
 		print("chainlen:",self.chainlen)
 		print("no_clients:",self.no_clients)
 		self.client.displayClientDetails()
+		self.server.displayServerDetails()
 		
 def main():
 	
-	#config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
-	config_file = sys.argv[1]
+	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
+	#config_file = sys.argv[1]
 	#nrounds = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 	#npings = int(sys.argv[2]) if len(sys.argv) > 2 else 3
 	#config(clock='Lamport')
@@ -79,7 +103,7 @@ def main():
 				start_up_delay = line.strip().split(':')[1]
 	
 			if line.startswith('Len_of_chain:'):
-                                chain_len = line.strip().split(':')[1]
+                                chain_len = int(line.strip().split(':')[1])
 			
 			if line.startswith('No_Clients:'):
                                 no_clients = int(line.strip().split(':')[1])		
@@ -96,23 +120,24 @@ def main():
 				seed,numReq,probgetbal,probgetdep,probgetwithdraw = re.sub(r'[()]','',temp).strip().split(',')
 			if line.startswith('<Bank-End>'):
 				client = Client_Details(seed,bank_name,numReq,probgetbal,probgetdep,probgetwithdraw,reply_wait,num_retry)
-				bank = Bank_Details(bank_name,chain_len,no_clients,client)
+				server = Server_Details(start_up_delay)
+				bank = Bank_Details(bank_name,chain_len,no_clients,client,server)
 				bank_list.append(bank)
 	f.close()
 	#Do validation for no of banks
 	#Create client process for each bank
 	clients_list = []
+	servers_list = []
 	for item in bank_list:
-		clients_list.append(new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,
-				item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry],num = item.no_clients))
-		
+		temp_list = []
+		temp_list.append(new(Server,[item.bankname,item.server.startupdelay],num = item.chainlen))
+		servers_list = servers_list + temp_list
+		#print('Server_list:',servers_list)
+		clients_list.append(new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry,temp_list[0],temp_list[-1]],num = item.no_clients))
+	
+	for server in servers_list:
+		start(server)
+	
 	for client in clients_list:
 		start(client)	
-	
-	#pong = new(Pong, [nrounds * npings], num= 1)
-	#ping = new(Ping, num= npings)
-	#setup(ping, [pong, nrounds])
-	#start(pong)
-	#start(ping)
-
 
