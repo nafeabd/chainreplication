@@ -1,4 +1,4 @@
-#!/Library/Frameworks/Python.framework/Versions/3.4/bin/python3
+#!/usr/bin/env python3
 import sys
 import re
 class Client(process):
@@ -6,24 +6,37 @@ class Client(process):
 	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry,head,tail):
 		self.client_id = self.id._address[1]
 		output('client id:'+str(client_id))
-		output('BankName:'+bankname)
-		output('Head:'+str(head))
+		#output('BankName:'+bankname)
+		#output('Head:'+str(head))
+		#output('Tail:'+str(tail))
 
 	def main():
-		send(('hi',self.client_id), to=head)
+		#Generate requests based on probabilities and sent to servers
+		msg = 'hi'
+		send((msg,self.id), to=head)
+		await(False)
+	def receive(msg=(msg,p)):
+		output('msg from tail:'+msg)
+		output('tail id:'+str(p))	
 		
-        #await(len(listof(p, received(('Ping',), from_=p))) == total_pings)
+		
 
 class Server(process):
 	
-	def setup(bankname,startupdelay):
+	def setup(bankname,startupdelay,successor,predecessor):
 		self.server_id = self.id._address[1]
-		output('Server id '+str(server_id))
+		output('Server id: '+str(server_id))
+		#output('Predecessor id:'+str(predecessor))
+		#output('Sucessor id:'+str(successor))
 	def main():
-		await(False)
-	def receive(msg=('hi',p)):
-		output("from:"+p)
-		
+		await(False)	
+	def receive(msg=(msg,clientid)):
+		#output("clientid:"+str(clientid))
+		output("msg:"+msg)
+		if self.successor is not None:
+			send((msg,clientid),to=successor)
+		else:
+			send((msg,self.id),to=clientid)
 		
 
 class Client_Details:
@@ -126,18 +139,29 @@ def main():
 	f.close()
 	#Do validation for no of banks
 	#Create client process for each bank
-	clients_list = []
-	servers_list = []
 	for item in bank_list:
-		temp_list = []
-		temp_list.append(new(Server,[item.bankname,item.server.startupdelay],num = item.chainlen))
-		servers_list = servers_list + temp_list
-		#print('Server_list:',servers_list)
-		clients_list.append(new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry,temp_list[0],temp_list[-1]],num = item.no_clients))
+		server_list = list(new(Server,num = item.chainlen))
+		print('len of servers:',len(server_list))
+		print('server_list:',server_list)
+		
+		for index,server in enumerate(server_list):
+			#Server is Head
+			if index == 0 and len(server_list) > 1:
+				predecessor = None
+				successor = server_list[index+1]
+			elif index == 0 and len(server_list) == 1:
+				predecessor = None
+				successor = None
+			#Server is Tail
+			elif index == len(server_list)-1:
+				successor = None
+				predecessor = server_list[index-1]
+			else:
+				predecessor = server_list[index-1]
+				successor = server_list[index+1]
+			setup(server,[item.bankname,item.server.startupdelay,successor,predecessor])
+			start(server)			
+		clients = new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry,server_list[0],server_list[-1]],num = item.no_clients)
+		start(clients)
 	
-	for server in servers_list:
-		start(server)
-	
-	for client in clients_list:
-		start(client)	
 
