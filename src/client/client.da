@@ -6,25 +6,26 @@ class Client(process):
 	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry,head,tail):
 		self.client_id = self.id._address[1]
 		output('client id:'+str(client_id))
-		#output('BankName:'+bankname)
-		#output('Head:'+str(head))
-		#output('Tail:'+str(tail))
 
 	def main():
 		#Generate requests based on probabilities and sent to servers
 		
 		output('seed'+str(seed))
 		msg = 'hi'
-		ops = 'balance'
+		ops = 'deposit'
 		
-		values = ['100',5,20] #account no ,reqid
+		values = ('1001',5,20) #account no ,reqid
 		send((ops,values), to=head)
-		values = ['100',5,30] #account no ,reqid
+		values = ('1001',6,50) #account no ,reqid
 		send((ops,values), to=head)
+		values = ('1001',7,30) #account no ,reqid
+		send((ops,values), to=head)
+		#values = ('100',5,30) #account no ,reqid
+		#send((ops,values), to=head)
 		await(False)
-	def receive(msg=(msg,p)):
-		output('msg from tail:'+msg)
-		output('tail id:'+str(p))	
+	def receive(msg=('Toclient',reply),from_=p):
+		output(reply)
+		#output('tail id:'+str(p))	
 		
 	def getRandomOps():
 		output('implement random ops')
@@ -36,43 +37,78 @@ class Server(process):
 		self.server_id = self.id._address[1]
 		self.account_details = {}
 		output('Server id: '+str(server_id))
-		#output('Predecessor id:'+str(predecessor))
-		#output('Sucessor id:'+str(successor))
 	def main():
-		
-		#account_details = {}
-		#a.displayAccountDetails()
 		await(False)	
-	def receive(msg=(ops,values)):
-		account_no,req_id,balance = values[0],values[1],values[2]
+	#Receive from client
+	def receive(msg=(ops,values),from_=p):
+		account_no,req_id,amount = values
+		output('client id:'+str(p))
+		output('account_no:'+str(account_no))
+		output('ops:'+ops)
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
-		if ops is 'balance':
+		if ops == 'getbal':
 			bal = getBalance(req_id,account_no)
-		elif ops is 'deposit':
-			deposit(req_id,account_no,balance)
+
+		elif ops == 'deposit':
+			output('Perform deposit')
+			status = deposit(req_id,account_no,amount)
+			output('at server id'+str(server_id))
+			output(status)
+			if successor is None:
+				send(('Toclient',status[1]),to=p)
+			else:
+				send(('FromServer',account_no,status,p),to=successor)
+	#receive from another server
+	def receive(msg=('FromServer',account_no,status,client),from_=s):
+		if isAccountExists(account_no) is False:
+			createAccount(account_no)
+		output(status)
+		if status[0] == 'valid':
+			output('status is valid')
+			current_account = account_details[account_no]
+			current_account.balance = status[2]
+			current_account.processedTrans.append(status[3])
+			output(successor)
+			if successor is None:
+				send(('Toclient',status[1]),to=client)
+			else:
+				send(('FromServer',account_no,status,client),to=successor)
 		else:
-			withdraw(req_id,account_no,balance)
+			#Dont do anything , just pass on to other servers
+			if successor is None:
+				send(('Toclient',status[1]),to=client)
+			else:
+				send(('FromServer',account_no,status,client),to=successor)
 
 	def getBalance(req_id,account_no):
 		return account_details[account_no].balance
 		
-	def deposit(req_id,account_no,balance):
-		if verifyTransaction(req_id,'D',account,balance):
-			current_account = account_details[account_no] 
-			current_account.balance	+= balance
-			current_account.processedTrans.append((req_id,'D',balance))
-		
+	def deposit(req_id,account_no,amount):
+		output('in depoist function')
+		current_account = account_details[account_no]
+		if verifyTransaction(req_id,'D',account_no,amount) == 1:
+			current_account.balance	+= amount
+			current_account.processedTrans.append((req_id,'D',amount))
+			status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'D',amount))
+		elif verifyTransaction(req_id,'D',account_no,amount) == -1:
+			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
+		else:
+			status = ('duplicate',(req_id,account_no,'Processed',current_account.balance))
+
+		return status
 	def withdraw(req_id,account_no):
 		output('in withdraw')
 	
-	def verifyTransaction(req_id,ops,account_no,balance):
+	def verifyTransaction(req_id,ops,account_no,amount):
 		if account_no in account_details:
-			if (req_id,ops,balance) in account_details[account_no].processedTrans:
-				#send it again
-			elif req_id in [account_details[account_no].processedTrans[0][0] for i in processedTrans]		
-				return (req_id,'InconsistenWithHistory',balance)
-			output("do nothing")
+			if (req_id,ops,amount) in account_details[account_no].processedTrans:
+				return 0
+			elif req_id in [account_details[account_no].processedTrans[0][0] for i in account_details[account_no].processedTrans]:		
+				return -1
+			else:
+				return 1
+				
 		
 	def isAccountExists(account_no):
 		if account_no in account_details:
