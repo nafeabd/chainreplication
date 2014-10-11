@@ -12,32 +12,83 @@ class Client(process):
 
 	def main():
 		#Generate requests based on probabilities and sent to servers
+		
+		output('seed'+str(seed))
 		msg = 'hi'
-		send((msg,self.id), to=head)
+		ops = 'balance'
+		
+		values = ['100',5,20] #account no ,reqid
+		send((ops,values), to=head)
+		values = ['100',5,30] #account no ,reqid
+		send((ops,values), to=head)
 		await(False)
 	def receive(msg=(msg,p)):
 		output('msg from tail:'+msg)
 		output('tail id:'+str(p))	
 		
-		
+	def getRandomOps():
+		output('implement random ops')
+			
 
 class Server(process):
 	
 	def setup(bankname,startupdelay,successor,predecessor):
 		self.server_id = self.id._address[1]
+		self.account_details = {}
 		output('Server id: '+str(server_id))
 		#output('Predecessor id:'+str(predecessor))
 		#output('Sucessor id:'+str(successor))
 	def main():
-		await(False)	
-	def receive(msg=(msg,clientid)):
-		#output("clientid:"+str(clientid))
-		output("msg:"+msg)
-		if self.successor is not None:
-			send((msg,clientid),to=successor)
-		else:
-			send((msg,self.id),to=clientid)
 		
+		#account_details = {}
+		#a.displayAccountDetails()
+		await(False)	
+	def receive(msg=(ops,values)):
+		account_no,req_id,balance = values[0],values[1],values[2]
+		if isAccountExists(account_no) is False:
+			createAccount(account_no)
+		if ops is 'balance':
+			bal = getBalance(req_id,account_no)
+		elif ops is 'deposit':
+			deposit(req_id,account_no,balance)
+		else:
+			withdraw(req_id,account_no,balance)
+
+	def getBalance(req_id,account_no):
+		return account_details[account_no].balance
+		
+	def deposit(req_id,account_no,balance):
+		if verifyTransaction(req_id,'D',account,balance):
+			current_account = account_details[account_no] 
+			current_account.balance	+= balance
+			current_account.processedTrans.append((req_id,'D',balance))
+		
+	def withdraw(req_id,account_no):
+		output('in withdraw')
+	
+	def verifyTransaction(req_id,ops,account_no,balance):
+		if account_no in account_details:
+			if (req_id,ops,balance) in account_details[account_no].processedTrans:
+				#send it again
+			elif req_id in [account_details[account_no].processedTrans[0][0] for i in processedTrans]		
+				return (req_id,'InconsistenWithHistory',balance)
+			output("do nothing")
+		
+	def isAccountExists(account_no):
+		if account_no in account_details:
+			return True
+		return False
+			
+	def createAccount(account_no):
+		output('Create account')
+		account_details[account_no] = Account(0,[])
+class Account:
+	def __init__(self,balance,processedTrans=[]):
+		self.balance = balance
+		self.processedTrans = processedTrans
+
+	def displayAccountDetails(self):
+		print('balance:',str(self.balance))
 
 class Client_Details:
 
@@ -91,12 +142,6 @@ class Bank_Details:
 def main():
 	
 	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
-	#config_file = sys.argv[1]
-	#nrounds = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-	#npings = int(sys.argv[2]) if len(sys.argv) > 2 else 3
-	#config(clock='Lamport')
-	
-	#with open(config_file,'r') as f:
 	bank_list = []
 	f = open(config_file)
 	lines = f.readlines()
