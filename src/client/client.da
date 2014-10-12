@@ -3,6 +3,7 @@ import sys
 import re
 import random
 import time
+import logging
 class Client(process):
 
 	def setup(bankname,reply_wait,num_retry,req_details,head,tail):
@@ -32,6 +33,8 @@ class Client(process):
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
 				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 				send((ops,[account_no,req_id,amount]), to=server)
+				#if await(each(c in cohorts, has= some(received((req_id, account_no, _,_), from_= p))))
+				
 		else:
 			output(req_details)
 			requests = req_details[1:]
@@ -45,12 +48,23 @@ class Client(process):
 					amount,account_no = int(amount),int(account_no)
 					server = head
 				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
-				send((ops,[account_no,req_id,amount]), to=server)
-		output('******:'+str(listof(p,received(('Toclient',reply), from_=p))))
-		await(False)
+				output('num_retry:',num_retry)
+				output('reply_wait:',reply_wait)
+				while num_retry > 0:
+					send((ops,[account_no,req_id,amount]), to=server)
+					#output('Received Queue:******:'+str(listof(reply,received(('Toclient',reply), from_=p))))
+					if await(some(received(('Toclient',reply), from_=p), has=(req_id in reply and account_no in reply))):
+						output('****hi')
+						break
+					elif timeout(reply_wait):
+						output('timeout .. resending')
+						num_retry -= 1
+		#output('******:'+str(listof(p,received(('Toclient',reply), from_=p))))
+		await(True)
 		#await((len(listof(p, received(('Toclient',reply), from_=p)))) == count)	
 	def receive(msg=('Toclient',reply),from_=p):
 		output('reply:'+str(reply))
+		output('Received Queue:******:'+str(listof(reply,received(('Toclient',reply), from_=p))))
 		
 	def getRandomOps():
 		output('implement random ops')
@@ -61,7 +75,12 @@ class Server(process):
 	def setup(bankname,startupdelay,serverlifetime,successor,predecessor):
 		self.server_id = self.id._address[1]
 		self.account_details = {}
+		self.logpath = str(server_id)+'.out'
+		output('logpath:',logpath)
+		logging.basicConfig(filename=logpath,level=logging.DEBUG)
+		output('after something')
 	def main():
+		#logging.basicConfig(filename=logpath,level=logging.DEBUG)
 		output('serverlifetime:'+str(serverlifetime))
 		if serverlifetime[0] == 'receive':
 			count = int(serverlifetime[1])
@@ -74,6 +93,7 @@ class Server(process):
 		
 	#Receive from client
 	def receive(msg=(ops,values),from_=p):
+		logging.debug('This message should go to the log file')
 		output('------>>>in first receive of server')
 		account_no,req_id,amount = values
 		if isAccountExists(account_no) is False:
@@ -212,7 +232,9 @@ class Bank_Details:
 		self.server.displayServerDetails()
 		
 def main():
-	
+	logpath = 'hello.log'
+	logging.basicConfig(filename=logpath,level=logging.DEBUG)
+	logging.debug('This message should go to the log file')	
 	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
 	bank_list = []
 	f = open(config_file)
@@ -239,10 +261,10 @@ def main():
 				server_life_time = re.sub(r'[()]','',line.strip().split(':')[1]).split(',')
 				
 			if line.startswith('reply_wait:'):
-                                reply_wait = line.strip().split(':')[1]
+                                reply_wait = float(line.strip().split(':')[1])
 
 			if line.startswith('num_retry:'):
-                                num_retry = line.strip().split(':')[1]
+                                num_retry = int(line.strip().split(':')[1])
 
 			if line.startswith('Random:'):
 				temp = line.strip().split(':')[1]
