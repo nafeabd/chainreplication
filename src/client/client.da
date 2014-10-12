@@ -1,31 +1,55 @@
 #!/usr/bin/env python3
 import sys
 import re
+import random
 class Client(process):
 
-	def setup(bankname,seed,numreq,prob_bal,prob_dep,prob_withdraw,reply_wait,no_retry,head,tail):
+	def setup(bankname,reply_wait,num_retry,req_details,head,tail):
 		self.client_id = self.id._address[1]
 		output('client id:'+str(client_id))
+	
 
 	def main():
 		#Generate requests based on probabilities and sent to servers
-		
-		ops = 'deposit'
-		values = ('1001',5,50) #account no ,reqid
-		send((ops,values), to=head)
-
-		ops = 'withdraw'
-		values = ('1001',7,30) #account no ,reqid
-		send((ops,values), to=head)
-
-		ops = 'withdraw'
-		values = ('1001',8,40) #account no ,reqid
-		send((ops,values), to=head)
-
+		output(req_details[0])
+		if req_details[0] == 'random':
+			seed,numreq,prob_bal,prob_dep,prob_withdraw = req_details[1:]
+			weight = {}
+			weight['getbalance'], weight['deposit'], weight['withdraw']  = int(prob_bal * 100), int(prob_dep * 100), int(prob_withdraw * 100)
+			choice_list = [s for s in weight for i in range(weight[s])]
+			random.seed(seed)
+			for i in range(numreq):
+				ops = random.choice(choice_list)
+				seq_no = random.randint(10,100)
+				account_no = random.randint(100000,999999)
+				if ops == 'getbalance':
+					amount = None
+					server = tail
+				else:
+					server = head
+					amount = random.randint(1,500)
+				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
+				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+				send((ops,[account_no,req_id,amount]), to=server)
+		else:
+			output(req_details)
+			requests = req_details[1:]
+			for req in requests:
+				if len(req.strip().split(',')) == 3:
+					ops,req_id,account_no = req.strip().split(',')
+					amount = None
+					server = tail
+				else:
+					ops,req_id,account_no,amount = req.strip().split(',')
+					amount,account_no = int(amount),int(account_no)
+					server = head
+				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+				send((ops,[account_no,req_id,amount]), to=server)
+			
 		await(False)
+	
 	def receive(msg=('Toclient',reply),from_=p):
-		output(reply)
-		output('received from id:'+str(p))	
+		output('reply:'+str(reply))
 		
 	def getRandomOps():
 		output('implement random ops')
@@ -42,10 +66,10 @@ class Server(process):
 	#Receive from client
 	def receive(msg=(ops,values),from_=p):
 		account_no,req_id,amount = values
-		output('client id:'+str(p)+' accountn_no:'+str(account_no)+' ops:'+ops+' req_id:'+str(req_id)+' amount:'+str(amount))
+		#output('client id:'+str(p)+' accountn_no:'+str(account_no)+' ops:'+ops+' req_id:'+str(req_id)+' amount:'+str(amount))
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
-		if ops == 'getbal':
+		if ops == 'getbalance':
 			reply = getBalance(req_id,account_no)
 			send(('Toclient',reply),to=p)
 		elif ops == 'deposit':
@@ -69,11 +93,9 @@ class Server(process):
 			createAccount(account_no)
 		output(status)
 		if status[0] == 'valid':
-			output('status is valid')
 			current_account = account_details[account_no]
 			current_account.balance = status[2]
 			current_account.processedTrans.append(status[3])
-			output(successor)
 		#in case status not valid , just pass on to other servers
 		if successor is None:
 			send(('Toclient',status[1]),to=client)
@@ -114,7 +136,6 @@ class Server(process):
 		return status
 	
 	def verifyTransaction(req_id,ops,account_no,amount):
-		output('in verfiy transaction '+str(server_id))
 		if account_no in account_details:
 			if (req_id,ops,amount) in account_details[account_no].processedTrans:
 				return 0
@@ -141,27 +162,18 @@ class Account:
 
 class Client_Details:
 
-	def __init__(self,seed,bankname,numReq,probGetBalance,probDeposit,probWithdraw,reply_wait,no_retry):
-		self.seed = seed
+	def __init__(self,bankname,reply_wait,num_retry,request_details):
 		self.bankname = bankname
-		self.numReq = numReq
-		self.probGetBalance = probGetBalance
-		self.probDeposit = probDeposit
-		self.probWithdraw = probWithdraw
 		self.reply_wait = reply_wait
-		self.no_retry = no_retry
+		self.num_retry = num_retry
+		self.request_details = request_details
 
 	def displayClientDetails(self):
 		print("--Client details--\n")
-		print("seed:",self.seed)
 		print("bankname:",self.bankname)
-		print("numReq:",self.numReq)
-		print("probGetBal:",self.probGetBalance)
-		print("probGetDeposit:",self.probDeposit)
-		print("probWithdraw:",self.probWithdraw)
 		print("reply_wait:",self.reply_wait)
-		print("no_retry:",self.no_retry)
-
+		print("num_retry:",self.num_retry)
+		print("request_detaisl",self.request.details)
 
 class Server_Details:
 
@@ -225,8 +237,22 @@ def main():
 			if line.startswith('Random:'):
 				temp = line.strip().split(':')[1]
 				seed,numReq,probgetbal,probgetdep,probgetwithdraw = re.sub(r'[()]','',temp).strip().split(',')
+				request_details = ['random',int(seed),int(numReq),float(probgetbal),float(probgetdep),float(probgetwithdraw)]
+
+			if line.startswith('<Itemized_Req_Start>'):
+				request_details = ['itemized']
+
+			match = re.search(r'\[(.*)\]',line.strip())
+			
+			if match:
+				request_details.append(match.group(1))
+			
+			if line.startswith('<Itemized_Req_End>'):
+				print('request_details',request_details)
+
 			if line.startswith('<Bank-End>'):
-				client = Client_Details(seed,bank_name,numReq,probgetbal,probgetdep,probgetwithdraw,reply_wait,num_retry)
+				print('end bank:',request_details)
+				client = Client_Details(bank_name,reply_wait,num_retry,request_details)
 				server = Server_Details(start_up_delay)
 				bank = Bank_Details(bank_name,chain_len,no_clients,client,server)
 				bank_list.append(bank)
@@ -255,7 +281,7 @@ def main():
 				successor = server_list[index+1]
 			setup(server,[item.bankname,item.server.startupdelay,successor,predecessor])
 			start(server)			
-		clients = new(Client,[item.bankname,item.client.seed,item.client.numReq,item.client.probGetBalance,item.client.probDeposit,item.client.probWithdraw,item.client.reply_wait,item.client.no_retry,server_list[0],server_list[-1]],num = item.no_clients)
+		clients = new(Client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details,server_list[0],server_list[-1]],num = item.no_clients)
 		start(clients)
 	
 
