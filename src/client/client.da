@@ -2,6 +2,7 @@
 import sys
 import re
 import random
+import time
 class Client(process):
 
 	def setup(bankname,reply_wait,num_retry,req_details,head,tail):
@@ -45,9 +46,9 @@ class Client(process):
 					server = head
 				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 				send((ops,[account_no,req_id,amount]), to=server)
-			
+		output('******:'+str(listof(p,received(('Toclient',reply), from_=p))))
 		await(False)
-	
+		#await((len(listof(p, received(('Toclient',reply), from_=p)))) == count)	
 	def receive(msg=('Toclient',reply),from_=p):
 		output('reply:'+str(reply))
 		
@@ -57,16 +58,24 @@ class Client(process):
 
 class Server(process):
 	
-	def setup(bankname,startupdelay,successor,predecessor):
+	def setup(bankname,startupdelay,serverlifetime,successor,predecessor):
 		self.server_id = self.id._address[1]
 		self.account_details = {}
-		output('Server id: '+str(server_id))
 	def main():
-		await(False)	
+		output('serverlifetime:'+str(serverlifetime))
+		if serverlifetime[0] == 'receive':
+			count = int(serverlifetime[1])
+			await((len(listof(p, received((ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
+		elif serverlifetime[0] == 'send':
+			count = int(serverlifetime[1])
+			await((len(listof(reply, sent(('Toclient',reply), to=p))) + len(listof(p, sent(('FromServer',account_no,status,p), to=p)))) == count)
+		else:
+			await(False)
+		
 	#Receive from client
 	def receive(msg=(ops,values),from_=p):
+		output('------>>>in first receive of server')
 		account_no,req_id,amount = values
-		#output('client id:'+str(p)+' accountn_no:'+str(account_no)+' ops:'+ops+' req_id:'+str(req_id)+' amount:'+str(amount))
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		if ops == 'getbalance':
@@ -89,6 +98,7 @@ class Server(process):
 				
 	#receive from another server
 	def receive(msg=('FromServer',account_no,status,client),from_=s):
+		output('*******>in second receive of server')
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		output(status)
@@ -177,13 +187,14 @@ class Client_Details:
 
 class Server_Details:
 
-        def __init__(self,startupdelay):
-                self.startupdelay = startupdelay
+	def __init__(self,startupdelay,serverlifetime):
+		self.startupdelay = startupdelay
+		self.serverlifetime = serverlifetime
 
-        def displayServerDetails(self):
-                print("--Server details--\n")
-                print("startupdelay:",self.startupdelay)
-
+	def displayServerDetails(self):
+		print("--Server details--\n")
+		print("startupdelay:",self.startupdelay)
+		print("serverlifetime:",self.serverlifetime)
 
 class Bank_Details:
 	def __init__(self,bankname,chainlen,no_clients,client,server):
@@ -207,14 +218,11 @@ def main():
 	f = open(config_file)
 	lines = f.readlines()
 	for line in lines:
-			if len(line.strip()) == 0:
+			if len(line.strip()) == 0 or line.startswith('#') or line.startswith('<Bank-Start>'):
 				continue	
 			if line.startswith('Num_Banks'):
 				num_banks = line.strip().split(':')[1]
-			
-			if line.startswith('<Bank-Start>'):
-				continue
-				
+
 			if line.startswith('Bank_Name:'):
 				bank_name = line.strip().split(':')[1]	
 			
@@ -225,9 +233,11 @@ def main():
                                 chain_len = int(line.strip().split(':')[1])
 			
 			if line.startswith('No_Clients:'):
-                                no_clients = int(line.strip().split(':')[1])		
-
-
+                                no_clients = int(line.strip().split(':')[1])
+		
+			if line.startswith('Server_Life_time:'):
+				server_life_time = re.sub(r'[()]','',line.strip().split(':')[1]).split(',')
+				
 			if line.startswith('reply_wait:'):
                                 reply_wait = line.strip().split(':')[1]
 
@@ -248,12 +258,11 @@ def main():
 				request_details.append(match.group(1))
 			
 			if line.startswith('<Itemized_Req_End>'):
-				print('request_details',request_details)
+				continue
 
 			if line.startswith('<Bank-End>'):
-				print('end bank:',request_details)
 				client = Client_Details(bank_name,reply_wait,num_retry,request_details)
-				server = Server_Details(start_up_delay)
+				server = Server_Details(start_up_delay,server_life_time)
 				bank = Bank_Details(bank_name,chain_len,no_clients,client,server)
 				bank_list.append(bank)
 	f.close()
@@ -279,7 +288,7 @@ def main():
 			else:
 				predecessor = server_list[index-1]
 				successor = server_list[index+1]
-			setup(server,[item.bankname,item.server.startupdelay,successor,predecessor])
+			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor])
 			start(server)			
 		clients = new(Client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details,server_list[0],server_list[-1]],num = item.no_clients)
 		start(clients)
