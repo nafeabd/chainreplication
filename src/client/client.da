@@ -8,12 +8,19 @@ class Client(process):
 
 	def setup(bankname,reply_wait,num_retry,req_details,head,tail):
 		self.client_id = self.id._address[1]
-		output('client id:'+str(client_id))
-	
 
 	def main():
 		#Generate requests based on probabilities and sent to servers
-		output(req_details[0])
+		logger = logging.getLogger()
+		logfile = 'client_'+str(client_id)+'_'+bankname+'.log'
+		fh = logging.FileHandler(logfile)
+		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		fh.setFormatter(formatter)
+		logger.addHandler(fh)
+		logger.setLevel(logging.INFO)
+		output('Client id:'+str(client_id))
+		output('Bank Name:'+bankname+' Reply Wait:'+str(reply_wait)+' No.Retry:'+str(num_retry))
+		output('Request Information:'+str(req_details))
 		if req_details[0] == 'random':
 			seed,numreq,prob_bal,prob_dep,prob_withdraw = req_details[1:]
 			weight = {}
@@ -31,12 +38,16 @@ class Client(process):
 					server = head
 					amount = random.randint(1,500)
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
-				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
-				send((ops,[account_no,req_id,amount]), to=server)
-				#if await(each(c in cohorts, has= some(received((req_id, account_no, _,_), from_= p))))
+				output('Job Details:Operation:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+				while num_retry > 0:
+					send((ops,[account_no,req_id,amount]), to=server)
+					if await(some(received(('Toclient',reply), from_=p), has=(req_id in reply and account_no in reply))):
+						break
+					elif timeout(reply_wait):
+						output('Timeout .. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+						num_retry -= 1
 				
 		else:
-			output(req_details)
 			requests = req_details[1:]
 			for req in requests:
 				if len(req.strip().split(',')) == 3:
@@ -47,41 +58,40 @@ class Client(process):
 					ops,req_id,account_no,amount = req.strip().split(',')
 					amount,account_no = int(amount),int(account_no)
 					server = head
-				output('ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
-				output('num_retry:',num_retry)
-				output('reply_wait:',reply_wait)
+				output('Job Details:Operation:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 				while num_retry > 0:
 					send((ops,[account_no,req_id,amount]), to=server)
-					#output('Received Queue:******:'+str(listof(reply,received(('Toclient',reply), from_=p))))
 					if await(some(received(('Toclient',reply), from_=p), has=(req_id in reply and account_no in reply))):
-						output('****hi')
 						break
 					elif timeout(reply_wait):
-						output('timeout .. resending')
+						output('Timeout .. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 						num_retry -= 1
-		#output('******:'+str(listof(p,received(('Toclient',reply), from_=p))))
 		await(True)
-		#await((len(listof(p, received(('Toclient',reply), from_=p)))) == count)	
 	def receive(msg=('Toclient',reply),from_=p):
-		output('reply:'+str(reply))
-		output('Received Queue:******:'+str(listof(reply,received(('Toclient',reply), from_=p))))
+		output('Reply from tail:'+str(reply))
+		output('Received Queue:'+str(listof(reply,received(('Toclient',reply), from_=p))))
 		
-	def getRandomOps():
-		output('implement random ops')
-			
 
 class Server(process):
 	
 	def setup(bankname,startupdelay,serverlifetime,successor,predecessor):
 		self.server_id = self.id._address[1]
 		self.account_details = {}
-		self.logpath = str(server_id)+'.out'
-		output('logpath:',logpath)
-		logging.basicConfig(filename=logpath,level=logging.DEBUG)
-		output('after something')
+		self.send_msg_no = 0
+		self.receive_msg_no = 0
 	def main():
-		#logging.basicConfig(filename=logpath,level=logging.DEBUG)
-		output('serverlifetime:'+str(serverlifetime))
+
+		logger = logging.getLogger()
+		logfile = 'server_'+str(server_id)+'.log'
+		fh = logging.FileHandler(logfile)
+		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		fh.setFormatter(formatter)
+		logger.addHandler(fh)
+		logger.setLevel(logging.INFO)
+		if predecessor is None:
+			logger.info('I am the Head !!')
+		elif successor is None:
+			logger.info('I am the Tail !!')
 		if serverlifetime[0] == 'receive':
 			count = int(serverlifetime[1])
 			await((len(listof(p, received((ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
@@ -90,27 +100,29 @@ class Server(process):
 			await((len(listof(reply, sent(('Toclient',reply), to=p))) + len(listof(p, sent(('FromServer',account_no,status,p), to=p)))) == count)
 		else:
 			await(False)
-		
+			
 	#Receive from client
 	def receive(msg=(ops,values),from_=p):
-		logging.debug('This message should go to the log file')
-		output('------>>>in first receive of server')
 		account_no,req_id,amount = values
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
+		send_msg_no +=1
+		output('This is '+str(send_msg_no)+' message from this server')
 		if ops == 'getbalance':
 			reply = getBalance(req_id,account_no)
 			send(('Toclient',reply),to=p)
 		elif ops == 'deposit':
 			status = deposit(req_id,account_no,amount)
-			output(status)
+			output('Account Information after Operation - HEAD: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			output('Processed at Head:'+str(status))
 			if successor is None:
 				send(('Toclient',status[1]),to=p)
 			else:
 				send(('FromServer',account_no,status,p),to=successor)
 		elif ops == 'withdraw':
 			status = withdraw(req_id,account_no,amount)
-			output(status)
+			output('Account Information: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			output('Processed at Head:'+str(status))
 			if successor is None:
 				send(('Toclient',status[1]),to=p)
 			else:
@@ -118,15 +130,17 @@ class Server(process):
 				
 	#receive from another server
 	def receive(msg=('FromServer',account_no,status,client),from_=s):
-		output('*******>in second receive of server')
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
-		output(status)
+		send_msg_no +=1
+		output('This is '+str(send_msg_no)+' message from this server')
 		if status[0] == 'valid':
 			current_account = account_details[account_no]
 			current_account.balance = status[2]
 			current_account.processedTrans.append(status[3])
 		#in case status not valid , just pass on to other servers
+		output('Account Information: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+		output('Status of Request:'+str(status))
 		if successor is None:
 			send(('Toclient',status[1]),to=client)
 		else:
@@ -187,9 +201,6 @@ class Account:
 		self.balance = balance
 		self.processedTrans = processedTrans
 
-	def displayAccountDetails(self):
-		print('balance:',str(self.balance))
-
 class Client_Details:
 
 	def __init__(self,bankname,reply_wait,num_retry,request_details):
@@ -198,23 +209,11 @@ class Client_Details:
 		self.num_retry = num_retry
 		self.request_details = request_details
 
-	def displayClientDetails(self):
-		print("--Client details--\n")
-		print("bankname:",self.bankname)
-		print("reply_wait:",self.reply_wait)
-		print("num_retry:",self.num_retry)
-		print("request_detaisl",self.request.details)
-
 class Server_Details:
 
 	def __init__(self,startupdelay,serverlifetime):
 		self.startupdelay = startupdelay
 		self.serverlifetime = serverlifetime
-
-	def displayServerDetails(self):
-		print("--Server details--\n")
-		print("startupdelay:",self.startupdelay)
-		print("serverlifetime:",self.serverlifetime)
 
 class Bank_Details:
 	def __init__(self,bankname,chainlen,no_clients,client,server):
@@ -223,64 +222,62 @@ class Bank_Details:
 		self.no_clients = no_clients
 		self.client = client
 		self.server = server
-
-	def displayBankDetails(self):
-		print("Bankname:",self.bankname)
-		print("chainlen:",self.chainlen)
-		print("no_clients:",self.no_clients)
-		self.client.displayClientDetails()
-		self.server.displayServerDetails()
 		
 def main():
-	logpath = 'hello.log'
-	logging.basicConfig(filename=logpath,level=logging.DEBUG)
-	logging.debug('This message should go to the log file')	
-	config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
+	#config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
+	config_file = sys.argv[1] 
 	bank_list = []
 	f = open(config_file)
 	lines = f.readlines()
+	request_details = {}
+	client_no = 0
+	Request_Type = None
 	for line in lines:
-			if len(line.strip()) == 0 or line.startswith('#') or line.startswith('<Bank-Start>'):
+			line = line.strip()
+			if len(line) == 0 or line.startswith('#') or line.startswith('<Bank-Start>'):
 				continue	
-			if line.startswith('Num_Banks'):
-				num_banks = line.strip().split(':')[1]
+			if line.startswith('Banks'):
+				num_banks = line.split(':')[1]
 
 			if line.startswith('Bank_Name:'):
-				bank_name = line.strip().split(':')[1]	
+				bank_name = line.split(':')[1]	
 			
 			if line.startswith('Start_Up_Delay:'):
-				start_up_delay = line.strip().split(':')[1]
+				start_up_delay = line.split(':')[1]
 	
 			if line.startswith('Len_of_chain:'):
-                                chain_len = int(line.strip().split(':')[1])
+                                chain_len = int(line.split(':')[1])
 			
 			if line.startswith('No_Clients:'):
-                                no_clients = int(line.strip().split(':')[1])
+                                no_clients = int(line.split(':')[1])
 		
 			if line.startswith('Server_Life_time:'):
-				server_life_time = re.sub(r'[()]','',line.strip().split(':')[1]).split(',')
+				server_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')
 				
 			if line.startswith('reply_wait:'):
-                                reply_wait = float(line.strip().split(':')[1])
+                                reply_wait = float(line.split(':')[1])
 
 			if line.startswith('num_retry:'):
-                                num_retry = int(line.strip().split(':')[1])
+                                num_retry = int(line.split(':')[1])
 
 			if line.startswith('Random:'):
-				temp = line.strip().split(':')[1]
+				Request_Type = 'Random'
+				temp = line.split(':')[1]
 				seed,numReq,probgetbal,probgetdep,probgetwithdraw = re.sub(r'[()]','',temp).strip().split(',')
 				request_details = ['random',int(seed),int(numReq),float(probgetbal),float(probgetdep),float(probgetwithdraw)]
 
-			if line.startswith('<Itemized_Req_Start>'):
-				request_details = ['itemized']
+			if line.startswith('<Itemized_Start'):
+				Request_Type = 'Itemized'
+				request_list = ['itemized']
 
 			match = re.search(r'\[(.*)\]',line.strip())
 			
 			if match:
-				request_details.append(match.group(1))
+				request_list.append(match.group(1))
 			
-			if line.startswith('<Itemized_Req_End>'):
-				continue
+			if line.startswith('<Itemized_End'):
+				request_details[client_no] = request_list
+				client_no += 1
 
 			if line.startswith('<Bank-End>'):
 				client = Client_Details(bank_name,reply_wait,num_retry,request_details)
@@ -292,8 +289,6 @@ def main():
 	#Create client process for each bank
 	for item in bank_list:
 		server_list = list(new(Server,num = item.chainlen))
-		print('len of servers:',len(server_list))
-		print('server_list:',server_list)
 		
 		for index,server in enumerate(server_list):
 			#Server is Head
@@ -312,7 +307,12 @@ def main():
 				successor = server_list[index+1]
 			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor])
 			start(server)			
-		clients = new(Client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details,server_list[0],server_list[-1]],num = item.no_clients)
-		start(clients)
+		client_list = list(new(Client,num = item.no_clients))	
+		for index,client in enumerate(client_list):
+			if Request_Type == 'Random':
+				setup(client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details,server_list[0],server_list[-1]])
+			else:
+				setup(client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details[index],server_list[0],server_list[-1]])
+			start(client)
 	
 
