@@ -66,6 +66,7 @@ class Client(process):
 				if len(req.strip().split(',')) == 3:
 					ops,req_id,account_no = req.strip().split(',')
 					amount = None
+					account_no = int(account_no)
 					server = tail
 				else:
 					ops,req_id,account_no,amount = req.strip().split(',')
@@ -142,18 +143,18 @@ class Server(process):
 		logger.info('Received no of messages:'+str(receive_msg_no))
 		logger.info('Sent no of messages:'+str(send_msg_no))
 		if ops == 'getbalance':
-			logging.info('before getbalance operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			logging.info('before getbalance operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 			reply = getBalance(req_id,account_no)
 			logging.info('send reply to client:'+str(p))
 			send(('Toclient',reply,logical_clock()),to=p)
 
 		elif ops == 'deposit':
-			logging.info('before deposit operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			logging.info('before deposit operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 			status = deposit(req_id,account_no,amount)
 			logging.critical('Status of operation:'+str(status))
 
 		elif ops == 'withdraw':
-			logging.info('before withdraw operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			logging.info('before withdraw operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 			status = withdraw(req_id,account_no,amount)
 			logging.critical('Status of operation:'+str(status))
 
@@ -169,6 +170,7 @@ class Server(process):
 	def receive(msg=('FromServer',account_no,status,client),from_=s):
 		logging.info('Request received from its predecessor:'+str(predecessor))
 		logging.info('Req id :'+str(status[1][0]))
+		
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		receive_msg_no +=1
@@ -177,10 +179,10 @@ class Server(process):
 		logger.info('Sent no of messages:'+str(send_msg_no))
 		if status[0] == 'valid':
 			logging.info('Operation is valid so update its internal data structures')
-			current_account = account_details[account_no]
+			current_account = self.account_details[account_no]
 			current_account.balance = status[2]
 			current_account.processedTrans.append(status[3])
-			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
+			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 		else:
 			logging.info('Operation is invalid ! Just pass on request ..')
 
@@ -195,12 +197,12 @@ class Server(process):
 
 	def getBalance(req_id,account_no):
 		if isAccountExists(account_no) is False:
-			createAccount(account_no)
-		reply = (req_id,account_no,'Processed',account_details[account_no].balance)
+                        createAccount(account_no)
+		reply = (req_id,account_no,'Processed',self.account_details[account_no].balance)
 		return reply
 		
 	def deposit(req_id,account_no,amount):
-		current_account = account_details[account_no]
+		current_account = self.account_details[account_no]
 		if verifyTransaction(req_id,'D',account_no,amount) == 1:
 			current_account.balance	+= amount
 			current_account.processedTrans.append((req_id,'D',amount))
@@ -212,7 +214,7 @@ class Server(process):
 
 		return status
 	def withdraw(req_id,account_no,amount):
-		current_account = account_details[account_no]
+		current_account = self.account_details[account_no]
 		if verifyTransaction(req_id,'W',account_no,amount) == 1:
 			if current_account.balance < amount:
 				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance))
@@ -227,17 +229,17 @@ class Server(process):
 		return status
 	
 	def verifyTransaction(req_id,ops,account_no,amount):
-		if account_no in account_details:
-			if (req_id,ops,amount) in account_details[account_no].processedTrans:
+		if account_no in self.account_details:
+			if (req_id,ops,amount) in self.account_details[account_no].processedTrans:
 				return 0
-			elif req_id in [account_details[account_no].processedTrans[i][0] for i,j in enumerate(account_details[account_no].processedTrans)]:		
+			elif req_id in [self.account_details[account_no].processedTrans[i][0] for i,j in enumerate(self.account_details[account_no].processedTrans)]:		
 				return -1
 			else:
 				return 1
 				
 		
 	def isAccountExists(account_no):
-		if account_no in account_details:
+		if account_no in self.account_details:
 			logging.info('Account Exists!')
 			return True
 		logging.info('Account Not Exists!')
@@ -245,7 +247,7 @@ class Server(process):
 			
 	def createAccount(account_no):
 		logging.info('Creating Account!')
-		account_details[account_no] = Account(0,[])
+		self.account_details[account_no] = Account(0,[])
 class Account:
 	def __init__(self,balance,processedTrans=[]):
 		self.balance = balance
