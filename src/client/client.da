@@ -8,21 +8,30 @@ class Client(process):
 
 	def setup(bankname,reply_wait,num_retry,req_details,head,tail):
 		self.client_id = self.id._address[1]
-
+		self.logger = logging.getLogger()
 	def main():
-		#Generate requests based on probabilities and sent to servers
-		logger = logging.getLogger()
+		
+		#Intialize and set properties to logger for logging mechanism
 		logfile = 'client_'+str(client_id)+'_'+bankname+'.log'
 		fh = logging.FileHandler(logfile)
-		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
 		logger.setLevel(logging.INFO)
-		output('Client id:'+str(client_id))
-		output('Bank Name:'+bankname+' Reply Wait:'+str(reply_wait)+' No.Retry:'+str(num_retry))
-		output('Request Information:'+str(req_details))
+		ch = logger.handlers[0]
+		ch.setLevel(logging.CRITICAL)
+		ch.setFormatter(formatter)
+		logger.addHandler(ch)	
+		
+		#Client Level Information
+		logging.info('Client id:'+str(client_id))
+		logging.info('Generating log file:'+logfile)
+		logger.info('Bank Name:'+bankname+' Reply Wait:'+str(reply_wait)+' No.Retry:'+str(num_retry))
+
 		if req_details[0] == 'random':
 			seed,numreq,prob_bal,prob_dep,prob_withdraw = req_details[1:]
+			logger.info('Request Type:'+req_details[0])
+			logger.info('Seed:'+str(seed)+' NumReq:'+str(numreq)+' Prob_Bal:'+str(prob_bal)+' Prob_Dep:'+str(prob_dep)+' Prob_Withdraw:'+str(prob_withdraw))
 			weight = {}
 			weight['getbalance'], weight['deposit'], weight['withdraw']  = int(prob_bal * 100), int(prob_dep * 100), int(prob_withdraw * 100)
 			choice_list = [s for s in weight for i in range(weight[s])]
@@ -38,17 +47,21 @@ class Client(process):
 					server = head
 					amount = random.randint(1,500)
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
-				output('Job Details:Operation:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
 				while num_retry > 0:
 					send((ops,[account_no,req_id,amount]), to=server)
-					if await(some(received(('Toclient',reply), from_=p), has=(req_id in reply and account_no in reply))):
+					t = logical_clock()
+					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
 					elif timeout(reply_wait):
-						output('Timeout .. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+						logger.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 						num_retry -= 1
 				
 		else:
 			requests = req_details[1:]
+			logger.info('Request Type:'+req_details[0])
+			for req in requests:
+				logger.info('Request Information:'+str(req))
 			for req in requests:
 				if len(req.strip().split(',')) == 3:
 					ops,req_id,account_no = req.strip().split(',')
@@ -58,18 +71,19 @@ class Client(process):
 					ops,req_id,account_no,amount = req.strip().split(',')
 					amount,account_no = int(amount),int(account_no)
 					server = head
-				output('Job Details:Operation:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+				logging.critical('Request to Server: Operation:'+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
 				while num_retry > 0:
 					send((ops,[account_no,req_id,amount]), to=server)
-					if await(some(received(('Toclient',reply), from_=p), has=(req_id in reply and account_no in reply))):
+					t = logical_clock()
+					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
 					elif timeout(reply_wait):
-						output('Timeout .. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+						logging.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
 						num_retry -= 1
+		logging.info('Client Terminating .. all requests served!')
 		await(True)
-	def receive(msg=('Toclient',reply),from_=p):
-		output('Reply from tail:'+str(reply))
-		output('Received Queue:'+str(listof(reply,received(('Toclient',reply), from_=p))))
+	def receive(msg=('Toclient',reply,time),from_=p):
+		logging.critical('Reply from Server :'+str(reply))
 		
 
 class Server(process):
@@ -79,71 +93,104 @@ class Server(process):
 		self.account_details = {}
 		self.send_msg_no = 0
 		self.receive_msg_no = 0
-	def main():
+		self.logger = logging.getLogger()
 
-		logger = logging.getLogger()
+	def main():
+		#Logging init setup , Different log levels for files and consoles
 		logfile = 'server_'+str(server_id)+'.log'
 		fh = logging.FileHandler(logfile)
-		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
 		logger.setLevel(logging.INFO)
+		ch = logger.handlers[0]
+		ch.setLevel(logging.CRITICAL)
+		ch.setFormatter(formatter)
+		logger.addHandler(ch)
+
+
+		logger.info('Server Id:'+str(server_id))
+		logger.info('Belongs to:'+str(bankname))
+		logger.info('Predecessor id:'+str(predecessor))
+		logger.info('Sucessor id:'+str(successor))
 		if predecessor is None:
 			logger.info('I am the Head !!')
 		elif successor is None:
 			logger.info('I am the Tail !!')
+
 		if serverlifetime[0] == 'receive':
+			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')
 			count = int(serverlifetime[1])
 			await((len(listof(p, received((ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
 		elif serverlifetime[0] == 'send':
+			logger.info('Life Time:'+' Terminates after '+str(serverlifetime[1])+' send messages')
 			count = int(serverlifetime[1])
 			await((len(listof(reply, sent(('Toclient',reply), to=p))) + len(listof(p, sent(('FromServer',account_no,status,p), to=p)))) == count)
 		else:
+			logger.info('Life Time: Server never terminates!')
 			await(False)
 			
 	#Receive from client
 	def receive(msg=(ops,values),from_=p):
+		logger = logging.getLogger()
 		account_no,req_id,amount = values
+		logger.info('Req_id:'+str(req_id)+' Account:'+str(account_no)+' Amount:'+str(amount)+' Operation:'+ops)
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
+		receive_msg_no +=1
 		send_msg_no +=1
-		output('This is '+str(send_msg_no)+' message from this server')
+		logger.info('Received no of messages:'+str(receive_msg_no))
+		logger.info('Sent no of messages:'+str(send_msg_no))
 		if ops == 'getbalance':
+			logging.info('before getbalance operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
 			reply = getBalance(req_id,account_no)
-			send(('Toclient',reply),to=p)
+			logging.info('send reply to client:'+str(p))
+			send(('Toclient',reply,logical_clock()),to=p)
+
 		elif ops == 'deposit':
+			logging.info('before deposit operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
 			status = deposit(req_id,account_no,amount)
-			output('Account Information after Operation - HEAD: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
-			output('Processed at Head:'+str(status))
-			if successor is None:
-				send(('Toclient',status[1]),to=p)
-			else:
-				send(('FromServer',account_no,status,p),to=successor)
+			logging.critical('Status of operation:'+str(status))
+
 		elif ops == 'withdraw':
+			logging.info('before withdraw operation: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
 			status = withdraw(req_id,account_no,amount)
-			output('Account Information: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
-			output('Processed at Head:'+str(status))
-			if successor is None:
-				send(('Toclient',status[1]),to=p)
-			else:
-				send(('FromServer',account_no,status,p),to=successor)
+			logging.critical('Status of operation:'+str(status))
+
+		if successor is None and ops != 'getbalance':
+			logging.info('send reply to client:'+str(p))
+			send(('Toclient',status[1],logical_clock()),to=p)
+
+		elif ops != 'getbalance':
+			logging.info('Forward request to its successor:'+str(successor))
+			send(('FromServer',account_no,status,p),to=successor)
 				
 	#receive from another server
 	def receive(msg=('FromServer',account_no,status,client),from_=s):
+		logging.info('Request received from its predecessor:'+str(predecessor))
+		logging.info('Req id :'+str(status[1][0]))
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
+		receive_msg_no +=1
 		send_msg_no +=1
-		output('This is '+str(send_msg_no)+' message from this server')
+		logger.info('Received no of messages:'+str(receive_msg_no))
+		logger.info('Sent no of messages:'+str(send_msg_no))
 		if status[0] == 'valid':
+			logging.info('Operation is valid so update its internal data structures')
 			current_account = account_details[account_no]
 			current_account.balance = status[2]
 			current_account.processedTrans.append(status[3])
-		#in case status not valid , just pass on to other servers
-		output('Account Information: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
-		output('Status of Request:'+str(status))
-		if successor is None:
-			send(('Toclient',status[1]),to=client)
+			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(account_details[account_no].balance))
 		else:
+			logging.info('Operation is invalid ! Just pass on request ..')
+
+		#in case status not valid , just pass on to other servers
+		logger.critical('Status of operation  '+str(server_id) +':'+str(status))
+		if successor is None:
+			logging.info('send reply to client:'+str(client))
+			send(('Toclient',status[1],logical_clock()),to=client)
+		else:
+			logging.info('Forward request to its successor:'+str(successor))
 			send(('FromServer',account_no,status,client),to=successor)
 
 	def getBalance(req_id,account_no):
@@ -168,7 +215,7 @@ class Server(process):
 		current_account = account_details[account_no]
 		if verifyTransaction(req_id,'W',account_no,amount) == 1:
 			if current_account.balance < amount:
-				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance),current_account.balance)
+				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance))
 			else:
                         	current_account.balance -= amount
                         	current_account.processedTrans.append((req_id,'W',amount))
@@ -191,10 +238,13 @@ class Server(process):
 		
 	def isAccountExists(account_no):
 		if account_no in account_details:
+			logging.info('Account Exists!')
 			return True
+		logging.info('Account Not Exists!')
 		return False
 			
 	def createAccount(account_no):
+		logging.info('Creating Account!')
 		account_details[account_no] = Account(0,[])
 class Account:
 	def __init__(self,balance,processedTrans=[]):
@@ -232,6 +282,7 @@ def main():
 	request_details = {}
 	client_no = 0
 	Request_Type = None
+	config(clock = 'Lamport')
 	for line in lines:
 			line = line.strip()
 			if len(line) == 0 or line.startswith('#') or line.startswith('<Bank-Start>'):
@@ -306,7 +357,7 @@ def main():
 				predecessor = server_list[index-1]
 				successor = server_list[index+1]
 			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor])
-			start(server)			
+			start(server)
 		client_list = list(new(Client,num = item.no_clients))	
 		for index,client in enumerate(client_list):
 			if Request_Type == 'Random':
