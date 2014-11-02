@@ -70,16 +70,33 @@ class Master(process):
 			send(('NewTail',newtail),to=client_bank_chain[bankname])
 		else:
 			#Internal server failed
+			if server_bank_chain[bankname][server_index+1] is not None:
+				s_plus = server_bank_chain[bankname][server_index+1]
+			if server_bank_chain[bankname][server_index-1] is not None:
+				new_predecessor = s_minus = server_bank_chain[bankname][server_index-1]
+			del server_bank_chain[bankname][server_index]
+			send(('S-crash-to-S+',new_predecessor),to=s_plus)
+			#Check here
+			if await(some(received(('Lastupdate',last_update), from_=s_plus))):
+				send(('S-crash-to-S-',last_update,s_plus),to=s_minus)
+				break
+			elif timeout(10):
+				logger.critical('Some thing wrong...')	
 			logger.critical('Internal Server Failed:'+str(server_bank_chain[bankname][server_index]))
 	def reset_list():
 		for name in server_bank_chain:
 			active_server_list[name] = [0 for i in range(len(server_bank_chain[name]))]
 
+	#Receive message from each server	
 	def receive(msg=('Alive',bankname),from_=s):
 		if bankname in server_bank_chain:
 			active_server_list[bankname][server_bank_chain[bankname].index(s)] = 1
 		logger.critical('in receive of master:From:'+str(s))
 		logger.critical('in receive of master:From:'+str(bankname))
+
+	
+	def receive(msg=('Lastupdate',last_update),from_=s):
+		logger.critical('Lastupdate from S-plus:'+str(last_update))
 		
 
 class Client(process):
@@ -127,7 +144,7 @@ class Client(process):
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
 				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
 				while num_retry > 0:
-					send((ops,[account_no,req_id,amount]), to=server)
+					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
@@ -152,7 +169,7 @@ class Client(process):
 					server = head
 				logging.critical('Request to Server: Operation:'+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
 				while num_retry > 0:
-					send((ops,[account_no,req_id,amount]), to=server)
+					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
@@ -177,6 +194,8 @@ class Server(process):
 		self.send_msg_no = 0
 		self.receive_msg_no = 0
 		self.logger = logging.getLogger()
+		self.currentTrans = []
+		self.updateno = 0
 
 	def main():
 		#Logging init setup , Different log levels for files and consoles
@@ -206,7 +225,7 @@ class Server(process):
 		if serverlifetime[0] == 'receive':
 			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')
 			count = int(serverlifetime[1])
-			await((len(listof(p, received((ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
+			await((len(listof(p, received(('FromClient',ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
 		elif serverlifetime[0] == 'send':
 			logger.info('Life Time:'+' Terminates after '+str(serverlifetime[1])+' send messages')
 			count = int(serverlifetime[1])
@@ -227,8 +246,9 @@ class Server(process):
 				
 					
 	#Receive from client
-	def receive(msg=(ops,values),from_=p):
+	def receive(msg=('FromClient',ops,values),from_=p):
 		logger = logging.getLogger()
+		logger.critical('values***:'+str(values))
 		account_no,req_id,amount = values
 		logger.info('Req_id:'+str(req_id)+' Account:'+str(account_no)+' Amount:'+str(amount)+' Operation:'+ops)
 		if isAccountExists(account_no) is False:
@@ -258,14 +278,16 @@ class Server(process):
 			send(('Toclient',status[1],logical_clock()),to=p)
 
 		elif ops != 'getbalance':
+			updateno += 1
 			logging.info('Forward request to its successor:'+str(successor))
-			send(('FromServer',account_no,status,p),to=successor)
+			currentTrans.append((updateno,account_no,status,p))
+			send(('FromServer',updateno,account_no,status,p),to=successor)
 				
 	#receive from another server
-	def receive(msg=('FromServer',account_no,status,client),from_=s):
+	def receive(msg=('FromServer',latestupno,account_no,status,client),from_=s):
 		logging.info('Request received from its predecessor:'+str(predecessor))
 		logging.info('Req id :'+str(status[1][0]))
-		
+		updateno = latestupno
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		receive_msg_no +=1
@@ -276,8 +298,9 @@ class Server(process):
 			logging.info('Operation is valid so update its internal data structures')
 			current_account = self.account_details[account_no]
 			current_account.balance = status[2]
-			#current_account.processedTrans.append(status[3])
-			current_account.currentTrans.append(status[3])
+			
+			current_account.processedTrans.append(status[3])
+			#current_account.currentTrans.append(status[3])
 			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 		else:
 			logging.info('Operation is invalid ! Just pass on request ..')
@@ -287,21 +310,32 @@ class Server(process):
 		if successor is None:
 			logging.info('send reply to client:'+str(client))
 			send(('Toclient',status[1],logical_clock()),to=client)
-			account_details[account_no].processedTrans.append(status[3])
-			account_details[account_no].currentTrans.remove(status[3])
-			send(('Ack',status[3],account_no),to=predecessor)
+			send(('Ack',updateno),to=predecessor)
 		else:
 			logging.info('Forward request to its successor:'+str(successor))
-			send(('FromServer',account_no,status,client),to=successor)
+			currentTrans.append((updateno,account_no,status,client))
+			send(('FromServer',updateno,account_no,status,client),to=successor)
 
-	def receive(msg=('Ack',transaction,account_no),from_=s):
-		current_acc = self.account_details[account_no]
-		current_acc.processedTrans.append(transaction)
-		current_acc.currentTrans.remove(transaction)
+	def receive(msg=('Ack',updateno),from_=s):
+		#Remove transactions from currentTrans if updateno is given one or less than given(old  no's)
+		currentTrans = [item for item in currentTrans if item[0] > updateno]
 		if predecessor is not None:
-			send(('Ack',transaction,account_no),to=predecessor)
+			send(('Ack',updateno),to=predecessor)
 	
-	
+	#Internal Server failure , Receive message from Master(to S plus)
+	def receive(msg=('S-crash-to-S+,newPredecessor'),from_=s):
+		predecessor = newPredecessor
+		send(('Lastupdate',updateno),to=master)
+
+	#Internal Server Failure , Receive message from Master(to S minus) about last update of S+ and its new successor(i.e S+)
+	def receive(msg=('S-crash-to-S-',last_update,newSuccessor),from_=s):	
+		successor = newSuccessor
+		#Suspend processing of this server for some time -- To do
+		for item in currentTrans:
+			if item[0] > last_update:
+				#Check
+				send(('FromServer',item[0],item[1],item[2],item[3]),to=successor)
+	send(('S-crash-to-S-',last_update,s_plus),to=s_minus)
 	def getBalance(req_id,account_no):
 		if isAccountExists(account_no) is False:
                         createAccount(account_no)
@@ -312,8 +346,8 @@ class Server(process):
 		current_account = self.account_details[account_no]
 		if verifyTransaction(req_id,'D',account_no,amount) == 1:
 			current_account.balance	+= amount
-			#current_account.processedTrans.append((req_id,'D',amount))
-			current_account.currentTrans.append((req_id,'D',amount))
+			current_account.processedTrans.append((req_id,'D',amount))
+			#current_account.currentTrans.append((req_id,'D',amount))
 			status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'D',amount))
 		elif verifyTransaction(req_id,'D',account_no,amount) == -1:
 			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
@@ -328,8 +362,8 @@ class Server(process):
 				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance))
 			else:
 				current_account.balance -= amount
-                        	#current_account.processedTrans.append((req_id,'W',amount))
-				current_account.currentTrans.append((req_id,'W',amount))
+				current_account.processedTrans.append((req_id,'W',amount))
+				#current_account.currentTrans.append((req_id,'W',amount))
 				status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'W',amount))
 		elif verifyTransaction(req_id,'W',account_no,amount) == -1:
 			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
@@ -357,12 +391,11 @@ class Server(process):
 			
 	def createAccount(account_no):
 		logging.info('Creating Account!')
-		self.account_details[account_no] = Account(0,[],[])
+		self.account_details[account_no] = Account(0,[])
 class Account:
-	def __init__(self,balance,processedTrans=[],currentTrans=[]):
+	def __init__(self,balance,processedTrans=[]):
 		self.balance = balance
 		self.processedTrans = processedTrans
-		self.currentTrans = currentTrans
 
 class Client_Details:
 
