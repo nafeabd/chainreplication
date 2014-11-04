@@ -4,17 +4,20 @@ import re
 import random
 import time
 import logging
+import threading
 from threading import Thread
 from time import sleep
-
+import os.path
+#from _thread import start_new_thread
 class Master(process):
 	def setup(server_bank_chain,client_bank_chain):
 		self.master_id = self.id._address[1]
 		self.active_server_list = {}
 		self.logger = logging.getLogger()
 	def main():
+		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
 		logfile = 'master_'+str(master_id)+'.log'
-		fh = logging.FileHandler(logfile)
+		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
@@ -48,6 +51,7 @@ class Master(process):
 				else:
 					logger.critical('Some thing bad!!:'+str(active_server_list)+' bankname:'+str(fail_server_bank)+' index:'+str(fail_server_index))	
 					handle_failure(fail_server_bank,fail_server_index)
+					reset_list()
 						
 	def handle_failure(bankname,server_index):
 		#Decide which server is failed i.e head,tail or internal server
@@ -70,11 +74,14 @@ class Master(process):
 			send(('NewTail',newtail),to=client_bank_chain[bankname])
 		else:
 			#Internal server failed
+			logger.critical('Internal Server Failed:'+str(server_bank_chain[bankname][server_index]))
 			if server_bank_chain[bankname][server_index+1] is not None:
 				s_plus = server_bank_chain[bankname][server_index+1]
 			if server_bank_chain[bankname][server_index-1] is not None:
 				new_predecessor = s_minus = server_bank_chain[bankname][server_index-1]
 			del server_bank_chain[bankname][server_index]
+			logger.critical('before send..')
+			logger.critical('s_plus:'+str(s_plus))
 			send(('S-crash-to-S+',new_predecessor),to=s_plus)
 			#Check here
 			if await(some(received(('Lastupdate',last_update), from_=s_plus))):
@@ -82,7 +89,6 @@ class Master(process):
 				break
 			elif timeout(10):
 				logger.critical('Some thing wrong...')	
-			logger.critical('Internal Server Failed:'+str(server_bank_chain[bankname][server_index]))
 	def reset_list():
 		for name in server_bank_chain:
 			active_server_list[name] = [0 for i in range(len(server_bank_chain[name]))]
@@ -91,8 +97,8 @@ class Master(process):
 	def receive(msg=('Alive',bankname),from_=s):
 		if bankname in server_bank_chain:
 			active_server_list[bankname][server_bank_chain[bankname].index(s)] = 1
-		logger.critical('in receive of master:From:'+str(s))
-		logger.critical('in receive of master:From:'+str(bankname))
+		#logger.critical('in receive of master:From:'+str(s))
+		#logger.critical('in receive of master:From:'+str(bankname))
 
 	
 	def receive(msg=('Lastupdate',last_update),from_=s):
@@ -105,10 +111,10 @@ class Client(process):
 		self.client_id = self.id._address[1]
 		self.logger = logging.getLogger()
 	def main():
-		
+		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
 		#Intialize and set properties to logger for logging mechanism
 		logfile = 'client_'+str(client_id)+'_'+bankname+'.log'
-		fh = logging.FileHandler(logfile)
+		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
@@ -132,25 +138,27 @@ class Client(process):
 			choice_list = [s for s in weight for i in range(weight[s])]
 			random.seed(seed)
 			for i in range(numreq):
+				retry_val = num_retry
 				ops = random.choice(choice_list)
 				seq_no = random.randint(10,100)
 				account_no = random.randint(100000,999999)
 				if ops == 'getbalance':
 					amount = None
-					server = tail
+					#server = tail
 				else:
-					server = head
+					#server = head
 					amount = random.randint(1,500)
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
 				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
-				while num_retry > 0:
+				while retry_val >= 0:
+					server = tail if ops == 'getbalance' else head
 					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
 					elif timeout(reply_wait):
 						logger.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
-						num_retry -= 1
+						retry_val -= 1
 				
 		else:
 			requests = req_details[1:]
@@ -158,33 +166,38 @@ class Client(process):
 			for req in requests:
 				logger.info('Request Information:'+str(req))
 			for req in requests:
+				retry_val = num_retry
 				if len(req.strip().split(',')) == 3:
 					ops,req_id,account_no = req.strip().split(',')
 					amount = None
 					account_no = int(account_no)
-					server = tail
+					#server = tail
 				else:
 					ops,req_id,account_no,amount = req.strip().split(',')
 					amount,account_no = int(amount),int(account_no)
-					server = head
+					#server = head
 				logging.critical('Request to Server: Operation:'+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
-				while num_retry > 0:
+				while retry_val >= 0:
+					server = tail if len(req.strip().split(',')) == 3 else head
+					logger.info('client to Server Head: '+str(server))
 					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
 					elif timeout(reply_wait):
 						logging.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
-						num_retry -= 1
+						retry_val -= 1
 		logging.info('Client Terminating .. all requests served!')
 		await(True)
 	def receive(msg=('Toclient',reply,time),from_=p):
 		logging.critical('Reply from Server :'+str(reply))
 	
 	def receive(msg=('NewHead',newhead),from_=p):
+		logger.critical('Head Failed,Set new head to:'+str(newhead))
 		head = newhead
 
 	def receive(msg=('NewTail',newtail),from_=p):
+		logger.critical('Tail Failed,Set new tail to:'+str(newtail))
 		tail = newtail		
 class Server(process):
 	
@@ -196,12 +209,14 @@ class Server(process):
 		self.logger = logging.getLogger()
 		self.currentTrans = []
 		self.updateno = 0
-
 	def main():
+		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
 		#Logging init setup , Different log levels for files and consoles
 		logfile = 'server_'+str(server_id)+'.log'
-		fh = logging.FileHandler(logfile)
+		#fh = logging.FileHandler(logfile)
+		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
+		#formatter = logging.Formatter('%(asctime)s - %(processName)s - %(thread)d - %(threadName)s -  %(message)s')
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
 		logger.setLevel(logging.INFO)
@@ -209,11 +224,16 @@ class Server(process):
 		ch.setLevel(logging.CRITICAL)
 		ch.setFormatter(formatter)
 		logger.addHandler(ch)
-		
-		thread = Thread(target = ping_master, args = (10, ))
+		halt = threading.Event()
+		thread = Thread(name='my_thread',target = ping_master, args = (halt, ))
+		#logger.critical('Thread:'+str(thread))
+		#logger.critical('Thread**'+str(threading.current_thread().name))
+		#logger.critical('type:'+str(type(threading.current_thread().name)))
 		thread.start()
-		logger.critical('thread started')
-		logger.info('Server Id:'+str(server_id))
+		#thread.join()
+		#start_new_thread(ping_master,(10,))
+		#logger.critical('thread started')
+		logger.critical('Server Id:'+str(server_id))
 		logger.info('Belongs to:'+str(bankname))
 		logger.info('Predecessor id:'+str(predecessor))
 		logger.info('Sucessor id:'+str(successor))
@@ -221,34 +241,36 @@ class Server(process):
 			logger.info('I am the Head !!')
 		elif successor is None:
 			logger.info('I am the Tail !!')
-
+		
 		if serverlifetime[0] == 'receive':
 			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')
 			count = int(serverlifetime[1])
-			await((len(listof(p, received(('FromClient',ops,values), from_=p))) + len(listof(p, received(('FromServer',account_no,status,client), from_=p)))) == count)
+			logger.critical('count:'+str(count))
+			await(((len(listof(p, received(('FromClient',ops,values), from_=p)))) + (len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p))))) == count)
+			#await(len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p))) == count)
+
 		elif serverlifetime[0] == 'send':
 			logger.info('Life Time:'+' Terminates after '+str(serverlifetime[1])+' send messages')
 			count = int(serverlifetime[1])
-			await((len(listof(reply, sent(('Toclient',reply), to=p))) + len(listof(p, sent(('FromServer',account_no,status,p), to=p)))) == count)
+			await((len(listof(reply, sent(('Toclient',reply), to=p))) + len(listof(p, sent(('FromServer',latestupno,account_no,status,p), to=p)))) == count)
 		else:
 			logger.info('Life Time: Server never terminates!')
 			await(False)
-
-	def ping_master(arg):
-		logger.critical('In ping_master!!')
-		while True:
-			if (await(False)):
-				#logger.critical('Always here!')
-				pass
-			elif timeout(2):
-				logger.critical('Now here!')
-				send(('Alive',bankname),to=master)
-				
+		halt.set()
+		logger.critical('I am Dead !!')
+	
+	def ping_master(event):
+		logger.critical('In ping_master---')
+		while not event.is_set():
+			#logger.critical('CLock:'+str(logical_clock()))
+			#logger.critical('I am Alive...Thread........')
+			sleep(1)
+			send(('Alive',bankname),to=master)
+		logger.critical('Kill thread!!!')			
 					
 	#Receive from client
 	def receive(msg=('FromClient',ops,values),from_=p):
 		logger = logging.getLogger()
-		logger.critical('values***:'+str(values))
 		account_no,req_id,amount = values
 		logger.info('Req_id:'+str(req_id)+' Account:'+str(account_no)+' Amount:'+str(amount)+' Operation:'+ops)
 		if isAccountExists(account_no) is False:
@@ -279,6 +301,7 @@ class Server(process):
 
 		elif ops != 'getbalance':
 			updateno += 1
+			logging.info('Update No before forwarding to its successor:'+str(updateno))
 			logging.info('Forward request to its successor:'+str(successor))
 			currentTrans.append((updateno,account_no,status,p))
 			send(('FromServer',updateno,account_no,status,p),to=successor)
@@ -288,6 +311,7 @@ class Server(process):
 		logging.info('Request received from its predecessor:'+str(predecessor))
 		logging.info('Req id :'+str(status[1][0]))
 		updateno = latestupno
+		logging.info('Update No This Server has received:'+str(latestupno))
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		receive_msg_no +=1
@@ -312,30 +336,39 @@ class Server(process):
 			send(('Toclient',status[1],logical_clock()),to=client)
 			send(('Ack',updateno),to=predecessor)
 		else:
+			logging.info('forwarding update no to its sucessor:'+str(updateno))
 			logging.info('Forward request to its successor:'+str(successor))
 			currentTrans.append((updateno,account_no,status,client))
 			send(('FromServer',updateno,account_no,status,client),to=successor)
 
 	def receive(msg=('Ack',updateno),from_=s):
 		#Remove transactions from currentTrans if updateno is given one or less than given(old  no's)
+		logger.critical('Receive ACK - CurrentTrans - Before:'+str(currentTrans))
 		currentTrans = [item for item in currentTrans if item[0] > updateno]
+		logger.critical('Receive ACK - CurrentTrans - After:'+str(currentTrans))
 		if predecessor is not None:
+			#logger.critical('Send ACK to predecessor:'+str(predecessor))
 			send(('Ack',updateno),to=predecessor)
 	
 	#Internal Server failure , Receive message from Master(to S plus)
-	def receive(msg=('S-crash-to-S+,newPredecessor'),from_=s):
+	def receive(msg=('S-crash-to-S+',newPredecessor),from_=s):
+		logger.critical('in receive of S-crash-to-S+')
+		logger.critical('Internal Server Failed...in receive from master to s plus')
 		predecessor = newPredecessor
+		logger.critical('Lastupdate:'+str(updateno))
 		send(('Lastupdate',updateno),to=master)
 
 	#Internal Server Failure , Receive message from Master(to S minus) about last update of S+ and its new successor(i.e S+)
 	def receive(msg=('S-crash-to-S-',last_update,newSuccessor),from_=s):	
+		logger.critical('in receive of S-crash-to-S-')
 		successor = newSuccessor
 		#Suspend processing of this server for some time -- To do
+		logger.critical('currentTrans:'+str(currentTrans))
 		for item in currentTrans:
 			if item[0] > last_update:
 				#Check
+				logger.critical('Send latest update that is missing to sucessor:'+str(item[0]))
 				send(('FromServer',item[0],item[1],item[2],item[3]),to=successor)
-	send(('S-crash-to-S-',last_update,s_plus),to=s_minus)
 	def getBalance(req_id,account_no):
 		if isAccountExists(account_no) is False:
                         createAccount(account_no)
@@ -449,8 +482,10 @@ def main():
                                 no_clients = int(line.split(':')[1])
 		
 			if line.startswith('Server_Life_time:'):
-				server_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')
-				
+				lifetimes = line.split(':')[1].split(';')
+				server_life_time = [re.sub(r'[()]','',i).split(',')  for i in lifetimes]				
+				#server_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')
+				print('server_life_time:',server_life_time)
 			if line.startswith('reply_wait:'):
                                 reply_wait = float(line.split(':')[1])
 
@@ -488,10 +523,13 @@ def main():
 	#Do validation for no of banks
 	#Create client process for each bank
 	master = new(Master,num = 1)
+	#for_testing = [['receive','2'],['unbound'],['unbound']]
 	for item in bank_list:
+		var_count = 0
 		server_list = list(new(Server,num = item.chainlen))
 		bank_server_chain[item.bankname] = server_list
 		for index,server in enumerate(server_list):
+			
 			#Server is Head
 			if index == 0 and len(server_list) > 1:
 				predecessor = None
@@ -506,7 +544,9 @@ def main():
 			else:
 				predecessor = server_list[index-1]
 				successor = server_list[index+1]
-			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor,master])
+			#setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor,master])
+			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime[var_count],successor,predecessor,master])
+			var_count += 1
 			start(server)
 		client_list = list(new(Client,num = item.no_clients))	
 		bank_client_chain[item.bankname] = client_list
