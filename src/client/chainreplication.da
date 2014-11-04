@@ -63,6 +63,7 @@ class Master(process):
 				newhead = server_bank_chain[bankname][server_index+1]
 				del server_bank_chain[bankname][server_index]
 				logger.critical('Changed list:'+str(server_bank_chain[bankname]))
+				send(('notify_head',),to=newhead)
 				send(('NewHead',newhead),to=client_bank_chain[bankname])
 
 		elif server_index == len(server_bank_chain[bankname]) - 1:
@@ -71,6 +72,7 @@ class Master(process):
 			newtail = server_bank_chain[bankname][server_index-1]
 			del server_bank_chain[bankname][server_index]
 			logger.critical('Changed list:'+str(server_bank_chain[bankname]))
+			send(('notify_tail',),to=newtail)
 			send(('NewTail',newtail),to=client_bank_chain[bankname])
 		else:
 			#Internal server failed
@@ -190,7 +192,7 @@ class Client(process):
 		logging.info('Client Terminating .. all requests served!')
 		await(True)
 	def receive(msg=('Toclient',reply,time),from_=p):
-		logging.critical('Reply from Server :'+str(reply))
+		logging.critical('Reply from Server :'+str(reply)+' Server Info:'+str(p))
 	
 	def receive(msg=('NewHead',newhead),from_=p):
 		logger.critical('Head Failed,Set new head to:'+str(newhead))
@@ -199,6 +201,7 @@ class Client(process):
 	def receive(msg=('NewTail',newtail),from_=p):
 		logger.critical('Tail Failed,Set new tail to:'+str(newtail))
 		tail = newtail		
+
 class Server(process):
 	
 	def setup(bankname,startupdelay,serverlifetime,successor,predecessor,master):
@@ -369,6 +372,15 @@ class Server(process):
 				#Check
 				logger.critical('Send latest update that is missing to sucessor:'+str(item[0]))
 				send(('FromServer',item[0],item[1],item[2],item[3]),to=successor)
+
+	#When head/tail is failed , master sends new server acting as new head/new tail informing about it's new role
+	def receive(msg=(role_notify,),from_=s):
+			logger.info('In receive of Role notification!')
+			if role_notify == 'notify_head':
+				predecessor = None
+			elif role_notify == 'notify_tail':
+				successor = None
+					
 	def getBalance(req_id,account_no):
 		if isAccountExists(account_no) is False:
                         createAccount(account_no)
