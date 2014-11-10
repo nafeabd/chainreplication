@@ -8,12 +8,16 @@ import threading
 from threading import Thread
 from time import sleep
 import os.path
+from datetime import datetime
 #from _thread import start_new_thread
 class Master(process):
 	def setup(server_bank_chain,client_bank_chain):
 		self.master_id = self.id._address[1]
 		self.active_server_list = {}
 		self.logger = logging.getLogger()
+		self.chain_extension = False
+		self.chain_extn_bank = None
+		self.sleep_time = 15
 	def main():
 		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
 		logfile = 'master_'+str(master_id)+'.log'
@@ -26,16 +30,16 @@ class Master(process):
 		ch.setLevel(logging.CRITICAL)
 		ch.setFormatter(formatter)
 		logger.addHandler(ch)
-		logger.critical('server_bank_chain:'+str(server_bank_chain))
+		logger.critical('Initial Server Bank Chain:'+str(server_bank_chain))
 		reset_list()
-		#thread = Thread(target = check_server)
-		#thread.start()
-		
-		#await(False)
+		#Special thread to notice chain extension progress
+		thread = Thread(name='thread_check',target = check_extn, args = ())
+		thread.start()
+
 		while True:
-			status = ''
+			status = ''			
 			if (await(False)):pass
-			elif timeout(3):
+			elif timeout(3):				
 				#see the state of active server list .
 				logger.critical('Active_server_list:'+str(active_server_list))
 				for i in active_server_list:
@@ -45,11 +49,11 @@ class Master(process):
 							fail_server_bank = i
 							fail_server_index = index	
 				if status != 'failed':
-					logger.critical('All good!!:'+str(active_server_list))
+					logger.info('All Servers Active!!:'+str(active_server_list))
 					reset_list()
-					logger.critical('After Reset!!:'+str(active_server_list))
+					#logger.critical('Reset the Server states!!:'+str(active_server_list))
 				else:
-					logger.critical('Some thing bad!!:'+str(active_server_list)+' bankname:'+str(fail_server_bank)+' index:'+str(fail_server_index))	
+					logger.critical('Oops Some thing bad happend!!:'+str(active_server_list))	
 					handle_failure(fail_server_bank,fail_server_index)
 					reset_list()
 						
@@ -61,18 +65,24 @@ class Master(process):
 			logger.critical('Head Failed:'+str(server_bank_chain[bankname][server_index]))
 			if server_bank_chain[bankname][server_index+1] is not None:
 				newhead = server_bank_chain[bankname][server_index+1]
+				logger.info('Remove Head from the list:'+str(server_bank_chain[bankname][server_index]))
 				del server_bank_chain[bankname][server_index]
-				logger.critical('Changed list:'+str(server_bank_chain[bankname]))
+				logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
+				logger.info('You are now head to!'+str(newhead))				
 				send(('notify_head',),to=newhead)
+				logger.info('new  head notification to following clients!'+str(client_bank_chain[bankname]))
 				send(('NewHead',newhead),to=client_bank_chain[bankname])
 
 		elif server_index == len(server_bank_chain[bankname]) - 1:
 			#Tail failed
 			logger.critical('Tail Failed:'+str(server_bank_chain[bankname][server_index]))
 			newtail = server_bank_chain[bankname][server_index-1]
+			logger.info('Remove Tail from the list:'+str(server_bank_chain[bankname][server_index]))
 			del server_bank_chain[bankname][server_index]
-			logger.critical('Changed list:'+str(server_bank_chain[bankname]))
+			logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
+			logger.info('You are now tail to!'+str(newtail))
 			send(('notify_tail',),to=newtail)
+			logger.info('new tail notification to following clients!'+str(client_bank_chain[bankname]))
 			send(('NewTail',newtail),to=client_bank_chain[bankname])
 		else:
 			#Internal server failed
@@ -81,19 +91,36 @@ class Master(process):
 				s_plus = server_bank_chain[bankname][server_index+1]
 			if server_bank_chain[bankname][server_index-1] is not None:
 				new_predecessor = s_minus = server_bank_chain[bankname][server_index-1]
+			logger.info('Remove failed server from the list:'+str(server_bank_chain[bankname][server_index]))
 			del server_bank_chain[bankname][server_index]
-			logger.critical('before send..')
-			logger.critical('s_plus:'+str(s_plus))
+			logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
 			#Inform S+ about S's failure and ask for it's latest update
+			logger.info('Send internal failure notification to successor(S+):'+str(s_plus))
 			send(('S-crash-to-S+',new_predecessor),to=s_plus)
 			t = logical_clock()
 			#Check here
 			if await(some(received(('Lastupdate',last_update,time), from_=s_plus),has=(t<time))):
+				logger.info('Send last update that S+ has served to s-minus->'+'Lastupdate:'+str(last_update)+' S-:'+str(s_minus))
 				send(('S-crash-to-S-',last_update,s_plus),to=s_minus)
 				break
 	
 			elif timeout(10):
-				logger.critical('Some thing wrong...')	
+				logger.critical('Some thing went wrong No reply  from S+ regarding last update..')
+
+	def check_extn():
+		#sleep(0.25)
+		while True:
+			if chain_extension == True:
+				logger.info('Chain extension is set True')
+				#do something.
+				#sleep(5)
+				sleep(sleep_time)
+				if chain_extension != False:
+					logger.info('New Server Might have failed ! Initiate graceful abort process to tail:'+str(server_bank_chain[chain_extn_bank][-1]))
+					send(('abort_chainextension',),to=server_bank_chain[chain_extn_bank][-1])
+					chain_extension,chain_extn_bank = False,None
+
+
 	def reset_list():
 		for name in server_bank_chain:
 			active_server_list[name] = [0 for i in range(len(server_bank_chain[name]))]
@@ -103,36 +130,37 @@ class Master(process):
 		if bankname in server_bank_chain:
 			if s in server_bank_chain[bankname]:				
 				active_server_list[bankname][server_bank_chain[bankname].index(s)] = 1
-			#else:
-				#logger.critical('Unknown Server Pinging !!')
-		#logger.critical('in receive of master:From:'+str(s))
-		#logger.critical('in receive of master:From:'+str(bankname))
+
 
 	
 	def receive(msg=('Lastupdate',last_update,time),from_=s):
 		logger.critical('Lastupdate from S-plus:'+str(last_update)+' from:'+str(s))
 
 	def receive(msg=('Join_Request',bankname),from_=s):
-		logger.critical('In receive of join request')
+		chain_extension = True
+		chain_extn_bank = bankname
+		sleep_time = 15
+		logger.critical('Join Request from:'+str(s))
 		#Determine tail of respective bank chain
 		curr_tail = server_bank_chain[bankname][-1]
 		logger.critical('curr_tail:'+str(curr_tail))
-		logger.critical('before send to current tail'+str(s))
-		send(('MakeTrue',),to=curr_tail)
-		logger.info('111')
-		sleep(0.5)
-		logger.info('222')
+		logger.critical('Intimate current tail about this request !'+str(s))
+		send(('SetJoinReq',),to=curr_tail)
+		sleep(3)
+		#sleep(1.5)
 		send(('JoinUpdate_Tail',s),to=curr_tail)
-		logger.critical('after send of join update to tail')
+		
 
 	def receive(msg=('I_am_extended_tail',bankname),from_=s):
-		logger.critical('I am new tail - chain extension success!'+str(s))
+		logger.critical('Chain Extension Success..Now New Tail is:'+str(s))
 		server_bank_chain[bankname].append(s)
 		active_server_list[bankname].append(1)
 		#reset_list()
-		logger.critical('New chain:'+str(server_bank_chain[bankname]))
+		logger.critical('New Server Bank Chain Now:'+str(server_bank_chain[bankname]))
+		logger.critical('Inform clients of the bank about new tail:'+str(client_bank_chain[bankname]))
 		send(('NewTail',s),to=client_bank_chain[bankname])
-		logger.critical('I am new tail - Done')
+		chain_extension = False
+		chain_extn_bank = None
 		
 		
 
@@ -209,8 +237,10 @@ class Client(process):
 					#server = head
 				logging.critical('Request to Server: Operation:'+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
 				while retry_val >= 0:
+					logger.info('time-1:'+str(datetime.now()))
 					server = tail if len(req.strip().split(',')) == 3 else head
-					logger.info('client to Server Head: '+str(server))
+					logger.info('time-2:'+str(datetime.now()))
+					logger.info('Send request to :'+str(server))
 					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
@@ -241,16 +271,15 @@ class Server(process):
 		self.logger = logging.getLogger()
 		self.currentTrans = []
 		self.updateno = 0
-		self.joinrequest = False
-		self.extendingOn = False
+		self.joinrequest,self.extendingOn,self.kill_server = False,False,False
+
 	def main():
 		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
 		#Logging init setup , Different log levels for files and consoles
 		logfile = 'server_'+str(server_id)+'.log'
 		#fh = logging.FileHandler(logfile)
 		fh = logging.FileHandler(os.path.join(logpath,logfile))
-		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
-		#formatter = logging.Formatter('%(asctime)s - %(processName)s - %(thread)d - %(threadName)s -  %(message)s')
+		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')		
 		fh.setFormatter(formatter)
 		logger.addHandler(fh)
 		logger.setLevel(logging.INFO)
@@ -263,13 +292,33 @@ class Server(process):
 		logger.info('Predecessor id:'+str(predecessor))
 		logger.info('Sucessor id:'+str(successor))
 		if predecessor is None and successor is None:
-			logger.critical('Backup Server:'+str(self))
+			
+			if serverlifetime[0] in ('receive','send'):
+				logger.info('Additional thread created to monitor chain extension progress!')
+				lifetime_type = serverlifetime[0]
+				lifetime_count = int(serverlifetime[1])
+				halt_extn = threading.Event()
+				thread_special = Thread(name='special_thread',target = set_state, args = (halt_extn,lifetime_type,lifetime_count))
+				thread_special.start()
+				
+
+			try_count = 2
+			logger.critical('New Server:'+str(self))
+			#Back Up Server sleeps for some time before sending join request to master
 			sleep(0.5)
-			logger.critical('Wake up and send join request')
-			logger.critical('self:'+str(self))
-			logger.critical('bankname:'+str(bankname))
-			logger.critical('master:'+str(master))
-			send(('Join_Request',bankname),to=master)
+			while try_count != 0 :
+				logger.info('I want to join the chain to master:'+str(master))				
+				send(('Join_Request',bankname),to=master)
+				tym = logical_clock()	
+				#If below await failed , it means current tail has failed..Check for EndExtending from Current Tail			
+				if await(some(received(('EndExtending',state), from_=s))):					
+					break
+				elif kill_server == True:
+					logger.info('Server is about to die')
+					break
+				elif timeout(10):
+					logger.info('Current Tail Failed while chain extension is in Progress...')
+					try_count -= 1	
 
 		elif predecessor is None:
 			logger.info('I am the Head !!')
@@ -277,46 +326,42 @@ class Server(process):
 			logger.info('I am the Tail !!')
 
 		halt = threading.Event()
-		thread = Thread(name='my_thread',target = ping_master, args = (halt, ))
-		#logger.critical('Thread:'+str(thread))
-		#logger.critical('Thread**'+str(threading.current_thread().name))
-		#logger.critical('type:'+str(type(threading.current_thread().name)))
+		thread = Thread(name='my_thread',target = ping_master, args = (halt,))
 		thread.start()
-		#thread.join()
-		#start_new_thread(ping_master,(10,))
-		#logger.critical('thread started')
-
-		
-		if serverlifetime[0] == 'receive':
+		if kill_server == True:
+			halt_extn.set()			
+		elif serverlifetime[0] == 'receive':
 			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')
-			count = int(serverlifetime[1])
-			logger.critical('count:'+str(count))
+			count = int(serverlifetime[1])			
 			await(((len(listof(p, received(('FromClient',ops,values), from_=p)))) + (len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p))))) >= count)
-			logger.critical('Out of await .. going to end now:'+str(len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p)))))
-			#await(len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p))) == count)
-
+			
 		elif serverlifetime[0] == 'send':
-			logger.info('will die checking send queue***')
 			logger.info('Life Time:'+' Terminates after '+str(serverlifetime[1])+' send messages')
 			count = int(serverlifetime[1])
-			logger.info('count:'+str(count))
-			await((len(listof(status, sent(('Toclient',status,time), to=p))) + len(listof(status, sent(('FromServer',latestupno,account_no,status,client), to=p)))) >= count)
-			logger.info('Length ***:'+str(len(listof(status, sent(('FromServer',latestupno,account_no,status,client), to=p)))))
+			await((len(listof(status, sent(('Toclient',status,time), to=p))) + len(listof(status, sent(('FromServer',latestupno,account_no,status,client), to=p)))) >= count)			
 		else:
 			logger.info('Life Time: Server never terminates!')
 			await(False)
 		halt.set()
 		logger.critical('I am Dead !!')
 	
-	def ping_master(event):
-		logger.critical('In ping_master---')
-		while not event.is_set():
-			#logger.critical('CLock:'+str(logical_clock()))
-			#logger.critical('I am Alive...Thread........')
+	def ping_master(event):		
+		while not event.is_set():		
 			send(('Alive',bankname),to=master)
 			sleep(1)
 		logger.critical('Kill thread!!!')			
-					
+	
+	def set_state(event,check_type,count):
+		while not event.is_set():						
+			if check_type == 'send': 
+				if send_msg_no >= count:					
+					kill_server = True
+
+			elif check_type == 'receive':
+				if receive_msg_no >= count:					
+					kill_server = True
+
+
 	#Receive from client
 	def receive(msg=('FromClient',ops,values),from_=p):
 		logger = logging.getLogger()
@@ -332,7 +377,7 @@ class Server(process):
 			logging.info('before getbalance operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 			reply = getBalance(req_id,account_no)
 			logging.info('send reply to client:'+str(p))
-			send(('Toclient',reply,logical_clock()),to=p)
+			send(('Toclient',reply,logical_clock()),to=p)			
 
 		elif ops == 'deposit':
 			logging.info('before deposit operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
@@ -347,6 +392,7 @@ class Server(process):
 		if successor is None and ops != 'getbalance':
 			logging.info('send reply to client:'+str(p))
 			send(('Toclient',status[1],logical_clock()),to=p)
+			
 
 		elif ops != 'getbalance':
 			updateno += 1
@@ -359,8 +405,7 @@ class Server(process):
 	def receive(msg=('FromServer',latestupno,account_no,status,client),from_=s):
 		logging.info('Request received from its predecessor:'+str(predecessor))
 		logging.info('Req id :'+str(status[1][0]))
-		logging.info('Update No This Server has received:'+str(latestupno))
-		logger.info('Length:'+str(len(listof(status, sent(('FromServer',latestupno,account_no,status,client), to=p)))))
+		logging.info('Update No This Server has received:'+str(latestupno))		
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		receive_msg_no +=1
@@ -371,9 +416,7 @@ class Server(process):
 			logging.info('Operation is valid so update its internal data structures')
 			current_account = self.account_details[account_no]
 			current_account.balance = status[2]
-			
-			current_account.processedTrans.append(status[3])
-			#current_account.currentTrans.append(status[3])
+			current_account.processedTrans.append(status[3])			
 			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 		else:
 			logging.info('Operation is invalid ! Just pass on request ..')
@@ -381,48 +424,53 @@ class Server(process):
 		#in case status not valid , just pass on to other servers
 		logger.critical('Status of operation  '+str(server_id) +':'+str(status))
 		updateno = latestupno
-		if successor is None:
-			logging.info('send reply to client:'+str(client))
+		if successor is None:			
 			if joinrequest == True:
-				logger.critical('Join request is true to add requests to currentTrans')
+				logger.critical('Join request is true so add requests to currentTrans')
 				currentTrans.append((updateno,account_no,status,client))
 			if extendingOn == True:
-				logger.critical('Extending is On , Dont sent to client')
+				logger.critical('Chain extension is Progress , Dont sent reply to client - current client had already did that!)')
+			else:
+				logging.info('Send reply to client:'+str(client))
 			if extendingOn != True:
-				send(('Toclient',status[1],logical_clock()),to=client)
+				send(('Toclient',status[1],logical_clock()),to=client)				
 				#Check
-				send(('Ack',updateno),to=predecessor)
+			logger.info('Send ACK for update no '+str(updateno)+' to '+str(predecessor))
+			send(('Ack',updateno),to=predecessor)
 		else:
 			logging.info('Update No before forwarding to its successor:'+str(updateno)+' successor:'+str(successor))
 			send(('FromServer',updateno,account_no,status,client),to=successor)
 			currentTrans.append((updateno,account_no,status,client))
 
 	def receive(msg=('Ack',updateno),from_=s):
+		updates_before = [item[0] for item in currentTrans]
 		#Remove transactions from currentTrans if updateno is given one or less than given(old  no's)
-		logger.critical('Receive ACK - CurrentTrans - Before:'+str(currentTrans)+' UpdateNo:'+str(updateno))
+		logger.critical('Receive ACK - CurrentTrans - Before:'+str(updates_before)+' Received UpdateNo:'+str(updateno))
 		currentTrans = [item for item in currentTrans if item[0] > updateno]
-		logger.critical('Receive ACK - CurrentTrans - After:'+str(currentTrans))
-		if predecessor is not None:
-			#logger.critical('Send ACK to predecessor:'+str(predecessor))
+		updates_after = [item[0] for item in currentTrans]
+		logger.critical('Receive ACK - CurrentTrans - After:'+str(updates_after))
+		
+		if predecessor is not None:	
+			logger.info('Send ACK for update no '+str(updateno)+' to '+str(predecessor))		
 			send(('Ack',updateno),to=predecessor)
 	
 	#Internal Server failure , Receive message from Master(to S plus)
 	def receive(msg=('S-crash-to-S+',newPredecessor),from_=s):
-		logger.critical('in receive of S-crash-to-S+')
-		logger.critical('Internal Server Failed...in receive from master to s plus')
+		logger.critical('In receive of S-crash-to-S+')
+		logger.critical('Update predecessor to :'+str(newPredecessor))
 		predecessor = newPredecessor
-		logger.critical('Lastupdate:'+str(updateno))
+		logger.critical('Send lastupdate number to master:'+str(updateno))
 		send(('Lastupdate',updateno,logical_clock()),to=master)
 
 	#Internal Server Failure , Receive message from Master(to S minus) about last update of S+ and its new successor(i.e S+)
 	def receive(msg=('S-crash-to-S-',last_update,newSuccessor),from_=s):	
-		logger.critical('in receive of S-crash-to-S-'+'last_update:'+str(last_update))
-		#Suspend processing of this server for some time -- To do
-		logger.critical('currentTrans:'+str(currentTrans))
+		logger.critical('In receive of S-crash-to-S-'+'last_update :'+str(last_update))
+		current_updates = [item[0] for item in currentTrans]		
+		logger.critical('currentTrans:'+str(current_updates))
+		logger.info('Send all updates after this update :'+str(last_update))
 		for item in currentTrans:
 			if item[0] > last_update:
-				logger.critical('item[0]:'+str(item[0]))
-				logger.critical('Send latest update that is missing to sucessor:'+str(item[0]))
+				logger.critical('Send update no that is missing in S+:'+str(item[0]))				
 				send(('FromServer',item[0],item[1],item[2],item[3]),to=newSuccessor)
 		successor = newSuccessor
 		logger.critical('My new successor is:'+str(successor))
@@ -440,50 +488,57 @@ class Server(process):
 	#Master -> T: T+ wants to join (Receive handler of current Tail)(for extending chain)
 	def receive(msg=('JoinUpdate_Tail',new_server,),from_=m):
 			#joinrequest = True
-			logger.info('In receive of JoinUpdatetoTail! from:'+str(m))
+			logger.info('Chain Extension in Progress ... !'+str(new_server))
+			logger.info('Send Current History to New Server..'+str(new_server))
 			send(('UpdateHistory',account_details),to=new_server)
-			logger.info('Make join request True')
-			#await(some(received(('updatehistdone',nserver,),from_=s)))
-			logger.info('after await..!!')
-			#send(('SendMsgToT'),to=self)
-			#T->T+:History update for each object
-			logger.critical('length of currentTrans of current Tail:'+str(len(currentTrans)))
+			current_updates = [item[0] for item in currentTrans]		
+			logger.critical('Send current updates to new server:'+str(current_updates))
 			for updates in currentTrans:
-				logger.info('updates[0]:'+str(updates[0]))
-				send(('FromServer',updates[0],updates[1],updates[2],updates[3]),to=new_server)	
-			logger.info('before send Endextending: from:'+str(self))
-			send(('EndExtending',False),to=new_server)
-			logger.info('after send extending:'+str(new_server))
-			logger.info('Make join request False')
+				send(('FromServer',updates[0],updates[1],updates[2],updates[3]),to=new_server)			
+			logger.info('All current updates send to new server,Request to End process to new server :'+str(new_server))
+			sleep(0.5)
+			send(('EndExtending',False),to=new_server)			
+			logger.info('Make Join Request False - I am no more a Tail')
 			joinrequest = False	
 			#Upon sending end of sent , stop acting as tail
 			successor = new_server
-	#def receive(msg=('updatehistdone',nserver),from_=s):
-	#		logger.info('Update history done...!')
 
-	def receive(msg=('MakeTrue',),from_=m):
-		logger.info('actual making join req true')
+	#Receive handler for T to set its joinupdate to true . This happens before above receive handler
+	def receive(msg=('SetJoinReq',),from_=m):
+		logger.info('New Server Join Request True [start adding updates to currentTrans]..!!')
 		joinrequest = True
+		#sleep(0.5)
 
 	#Receive handler for T+ once extending of chain is almost done
-	def receive(msg=('EndExtending',state),from_=s):
-			logger.info('In receive of EndExtending! from:'+str(s))
-			logger.info('Make extendingOn request :'+str(state))
+	def receive(msg=('EndExtending',state),from_=s):			
+			logger.info('Received all updates , About to end Chain Extension Process')
 			extendingOn = state
 			successor = None
-			logger.info('Inform master about its new role')
+			logger.info('I am now new tail ! I am going to inform master about my new role')
 			send(('I_am_extended_tail',bankname),to=master)
 
 	#Receive handler for T+ to get history from old tail(for extending a chain)
-	def receive(msg=('UpdateHistory',update_history),from_=s):
-			logger.info('In receive of UpdateHistory!')
+	def receive(msg=('UpdateHistory',update_history),from_=s):			
 			account_details = update_history
+			logger.info('Updating History from current tail Done !!'+str(s))
+			curr_ac = []
+			for i in account_details:
+				curr_ac.append(str(i)) 
+			logger.info('These accounts are updated:'+str(curr_ac))
+			logger.info('Chain Extension in progress .. Update requests but dont reply to client(current tail already replied)')
 			extendingOn = True
-			logger.info('Make extendingOn request :'+str(extendingOn))
+			logger.info('My new predecessor is :'+str(s))
 			predecessor = s
-			logger.critical('account_details:'+str(account_details))
-			logger.critical('predecessor:'+str(predecessor))
-			#send(('updatehistdone',s),to=s)
+
+	def receive(msg=('abort_chainextension',),from_=m):
+		logger.info('New server failed , Graceful Abort request from master')
+		logger.info('I am tail again!')
+		curr_updates = [item[0] for item in currentTrans]	
+		if successor is not None:
+			successor = None
+		logger.info('Clear the currentTrans data structure..'+str(curr_updates))	
+		currentTrans = []
+
 					
 	def getBalance(req_id,account_no):
 		if isAccountExists(account_no) is False:
@@ -569,7 +624,6 @@ class Bank_Details:
 		self.server = server
 		
 def main():
-	#config_file = '/Users/NafeesAhmed/Documents/async_project/chainreplication/config/test1_config.txt'
 	config_file = sys.argv[1] 
 	bank_list = []
 	f = open(config_file)
@@ -601,9 +655,7 @@ def main():
 			if line.startswith('Server_Life_time:'):
 				lifetimes = line.split(':')[1].split(';')
 				server_life_time = [re.sub(r'[()]','',i).split(',')  for i in lifetimes]				
-				#server_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')
-				print('server_life_time:',server_life_time)
-
+								
 			if line.startswith('reply_wait:'):
                               	reply_wait = float(line.split(':')[1])
 
@@ -617,8 +669,7 @@ def main():
 				backup_status = True
 
 			if line.startswith('BackUp_Lifetime:'):
-				bckUpServ_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')
-				print('bckUpServ_life_time:',bckUpServ_life_time)
+				bckUpServ_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')				
 
 			if line.startswith('Random:'):
 				Request_Type = 'Random'
@@ -688,7 +739,6 @@ def main():
 	start(master)
 
 	if backup_status:
-		print('There is backup Server')
 		bck_server = new(Server, [back_up_bankname,back_up_startdelay,bckUpServ_life_time,None,None,master], num= back_up_count)
 		start(bck_server)
 
