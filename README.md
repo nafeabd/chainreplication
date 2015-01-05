@@ -42,14 +42,6 @@ QUERIES
 
 UPDATES
 
-  [UPDATE 2014-10-04: in each of the following 3 paragraphs, I replaced "if
-  exactly the same transaction has already been processed for this account,
-  simply return <reqID, Processed, balance>." with "if exactly the same
-  transaction has already been processed, re-send the same reply."]
-
-  [UPDATE 2014-10-10: in each of the following 3 paragraphs, I added
-  accountNum as the second component of the reply.]
-
   deposit(reqID, accountNum, amount): if a transaction with this reqID has
   not been processed for this account, increase the account balance by the
   amount, append the transaction to processedTrans, and return <reqID,
@@ -69,7 +61,7 @@ UPDATES
   transaction has already been processed, re-send the same reply.  if a
   different transaction with the same reqID has been processed for this
   account, return <reqID, accountNum, InconsistentWithHistory, balance>.
-  [UPDATE 2014-10-11: added "for this account" in the preceding sentence.]
+
 
   transfer(reqID, accountNum, amount, destBank, destAccount): if a
   transaction with this reqID has not been processed for this account, and
@@ -82,16 +74,7 @@ UPDATES
   transaction has already been processed, re-send the same reply.  if a
   different transaction with the same reqID has been processed for this
   account, return <reqID, accountNum, InconsistentWithHistory, balance>.
-  [UPDATE 2014-10-11: added "for this account" in the preceding sentence
-  and in the first and second sentences of this paragraph.]  [UPDATE,
-  2014-09-17: added the following] It is acceptable for a server of either
-  the source bank or the destination bank to send a reply to the client.
-  However, the client should send the request only to a server of the
-  source bank; the client should not need to send a request to a server of
-  the destination bank.
 
-  [UPDATE 2014-11-14] for simplicity, you can assume that all transfers are
-  between two different banks.
 
 ============================================================
 SIMPLIFICATIONS
@@ -255,7 +238,7 @@ similar code can be used in the master to periodically "wake up" and check
 whether it has recently received enough heartbeat messages from each
 server.
 
-This Project is done as part of CSE535-Asynchronous Systems course work - Stony Brook University for Fall 2014 semester . Most 
-of the above description is copied from official description provided for the project for above mentioned course.
-============================================================
+This Project is done as part of CSE535-Asynchronous Systems course work - Stony Brook University for Fall 2014 semester . 
+Most of the above description is copied from official description provided for the project for above mentioned course.
+
 
