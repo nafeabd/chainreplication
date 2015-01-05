@@ -10,7 +10,6 @@ Chain replication is implementation as described in
   Replication for Supporting High Throughput and Availability.  In
   Proceedings of the 6th Symposium on Operating Systems Design and
   Implementation (OSDI), pages 91-104.  USENIX Association, 2004.
-  http://www.cs.cornell.edu/fbs/publications/ChainReplicOSDI.pdf
 
 ============================================================
 FUNCTIONALITY OF THE REPLICATED SERVICE
