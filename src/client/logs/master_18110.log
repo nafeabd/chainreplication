@@ -1,0 +1,50 @@
+2014-11-23 06:12:53,445 - Master-1 - Initial Server Bank Chain:{'TCFU': [<Server('nafeess-MacBook-Air.local', 34407)>, <Server('nafeess-MacBook-Air.local', 23659)>, <Server('nafeess-MacBook-Air.local', 23558)>], 'CITI': [<Server('nafeess-MacBook-Air.local', 36055)>, <Server('nafeess-MacBook-Air.local', 37082)>, <Server('nafeess-MacBook-Air.local', 34035)>]}
+2014-11-23 06:12:53,514 - Master-1 - In receive of head address of master
+2014-11-23 06:12:53,537 - Master-1 - Head of CITI is('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,613 - Master-1 - In receive of Tail address of master
+2014-11-23 06:12:53,614 - Master-1 - Tail of TCFU is('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:56,462 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1, 1]}
+2014-11-23 06:12:56,468 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1, 1]}
+2014-11-23 06:12:59,476 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [0, 1, 1]}
+2014-11-23 06:12:59,482 - Master-1 - Oops Some thing bad happend!!:{'TCFU': [1, 1, 1], 'CITI': [0, 1, 1]}
+2014-11-23 06:12:59,494 - Master-1 - Head Failed:('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:59,501 - Master-1 - Remove Head from the list:('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:59,507 - Master-1 - New Chain Structure :[<Server('nafeess-MacBook-Air.local', 37082)>, <Server('nafeess-MacBook-Air.local', 34035)>]
+2014-11-23 06:12:59,513 - Master-1 - You are now head to!('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:59,545 - Master-1 - new  head notification to following clients![<Client('nafeess-MacBook-Air.local', 36426)>]
+2014-11-23 06:13:02,577 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:02,584 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:05,596 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:05,602 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:08,613 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:08,620 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:11,625 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:11,631 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:14,639 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:14,645 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:17,658 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:17,664 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:20,670 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:20,676 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:23,689 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:23,695 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:26,708 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:26,714 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:29,727 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:29,733 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:32,741 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:32,747 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:35,760 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:35,766 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:38,779 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:38,785 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:41,798 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:41,804 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:44,817 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:44,818 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:47,831 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:47,837 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:50,849 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:50,855 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:53,868 - Master-1 - Active_server_list:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}
+2014-11-23 06:13:53,874 - Master-1 - All Servers Active!!:{'TCFU': [1, 1, 1], 'CITI': [1, 1]}

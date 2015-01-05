@@ -1,0 +1,62 @@
+2014-11-23 06:12:53,380 - Server-4 - Belongs to:TCFU
+2014-11-23 06:12:53,381 - Server-4 - Predecessor id:None
+2014-11-23 06:12:53,382 - Server-4 - Sucessor id:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,383 - Server-4 - I am the Head !!
+2014-11-23 06:12:53,385 - Server-4 - Life Time: Server never terminates!
+2014-11-23 06:12:53,406 - Server-4 - Req_id:CITI.1.100 Account:10001 Amount:500 Operation:deposit
+2014-11-23 06:12:53,407 - Server-4 - Account Not Exists!
+2014-11-23 06:12:53,407 - Server-4 - Creating Account!
+2014-11-23 06:12:53,408 - Server-4 - Received no of messages:1
+2014-11-23 06:12:53,408 - Server-4 - Sent no of messages:1
+2014-11-23 06:12:53,408 - Server-4 - before deposit operation: Account No:10001 Current Balance:0
+2014-11-23 06:12:53,409 - Server-4 - Status of operation:('valid', ('CITI.1.100', 10001, 'Processed', 500), 500, ('CITI.1.100', 'D', 500))
+2014-11-23 06:12:53,409 - Server-4 - Update No before forwarding to its successor:1 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,435 - Server-4 - Req_id:CITI.1.101 Account:10002 Amount:100 Operation:withdraw
+2014-11-23 06:12:53,436 - Server-4 - Account Not Exists!
+2014-11-23 06:12:53,436 - Server-4 - Creating Account!
+2014-11-23 06:12:53,437 - Server-4 - Received no of messages:2
+2014-11-23 06:12:53,438 - Server-4 - Sent no of messages:2
+2014-11-23 06:12:53,439 - Server-4 - before withdraw operation: Account No:10002 Current Balance:0
+2014-11-23 06:12:53,439 - Server-4 - Status of operation:('invalid', ('CITI.1.101', 10002, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,440 - Server-4 - Update No before forwarding to its successor:2 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,445 - Server-4 - Receive ACK - CurrentTrans - Before:[1, 2] Received UpdateNo:1
+2014-11-23 06:12:53,447 - Server-4 - Receive ACK - CurrentTrans - After:[2]
+2014-11-23 06:12:53,477 - Server-4 - Receive ACK - CurrentTrans - Before:[2] Received UpdateNo:2
+2014-11-23 06:12:53,478 - Server-4 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,484 - Server-4 - Req_id:CITI.1.103 Account:10001 Amount:200 Operation:transfer
+2014-11-23 06:12:53,485 - Server-4 - Account Exists!
+2014-11-23 06:12:53,485 - Server-4 - Received no of messages:3
+2014-11-23 06:12:53,486 - Server-4 - Sent no of messages:3
+2014-11-23 06:12:53,486 - Server-4 - before withdraw operation: Account No:10001 Current Balance:500
+2014-11-23 06:12:53,487 - Server-4 - Status of operation:('valid', ('CITI.1.103', 10001, 'Processed', 300), 300, ('CITI.1.103', 'T', 200))
+2014-11-23 06:12:53,487 - Server-4 - Update No before forwarding to its successor:3 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,638 - Server-4 - Req_id:CITI.1.108 Account:10005 Amount:200 Operation:withdraw
+2014-11-23 06:12:53,639 - Server-4 - Account Not Exists!
+2014-11-23 06:12:53,640 - Server-4 - Creating Account!
+2014-11-23 06:12:53,641 - Server-4 - Received no of messages:4
+2014-11-23 06:12:53,642 - Server-4 - Sent no of messages:4
+2014-11-23 06:12:53,642 - Server-4 - before withdraw operation: Account No:10005 Current Balance:0
+2014-11-23 06:12:53,642 - Server-4 - Status of operation:('invalid', ('CITI.1.108', 10005, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,643 - Server-4 - Update No before forwarding to its successor:4 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,646 - Server-4 - Receive ACK - CurrentTrans - Before:[3, 4] Received UpdateNo:3
+2014-11-23 06:12:53,647 - Server-4 - Receive ACK - CurrentTrans - After:[4]
+2014-11-23 06:12:53,674 - Server-4 - Req_id:CITI.1.109 Account:10002 Amount:300 Operation:deposit
+2014-11-23 06:12:53,674 - Server-4 - Account Exists!
+2014-11-23 06:12:53,675 - Server-4 - Received no of messages:5
+2014-11-23 06:12:53,675 - Server-4 - Sent no of messages:5
+2014-11-23 06:12:53,676 - Server-4 - before deposit operation: Account No:10002 Current Balance:0
+2014-11-23 06:12:53,676 - Server-4 - Status of operation:('valid', ('CITI.1.109', 10002, 'Processed', 300), 300, ('CITI.1.109', 'D', 300))
+2014-11-23 06:12:53,677 - Server-4 - Update No before forwarding to its successor:5 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,680 - Server-4 - Receive ACK - CurrentTrans - Before:[4, 5] Received UpdateNo:4
+2014-11-23 06:12:53,681 - Server-4 - Receive ACK - CurrentTrans - After:[5]
+2014-11-23 06:12:53,697 - Server-4 - Req_id:CITI.1.110 Account:10001 Amount:150 Operation:withdraw
+2014-11-23 06:12:53,698 - Server-4 - Account Exists!
+2014-11-23 06:12:53,699 - Server-4 - Received no of messages:6
+2014-11-23 06:12:53,699 - Server-4 - Sent no of messages:6
+2014-11-23 06:12:53,700 - Server-4 - before withdraw operation: Account No:10001 Current Balance:300
+2014-11-23 06:12:53,700 - Server-4 - Status of operation:('valid', ('CITI.1.110', 10001, 'Processed', 150), 150, ('CITI.1.110', 'W', 150))
+2014-11-23 06:12:53,701 - Server-4 - Update No before forwarding to its successor:6 successor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,706 - Server-4 - Receive ACK - CurrentTrans - Before:[5, 6] Received UpdateNo:5
+2014-11-23 06:12:53,706 - Server-4 - Receive ACK - CurrentTrans - After:[6]
+2014-11-23 06:12:53,733 - Server-4 - Receive ACK - CurrentTrans - Before:[6] Received UpdateNo:6
+2014-11-23 06:12:53,734 - Server-4 - Receive ACK - CurrentTrans - After:[]

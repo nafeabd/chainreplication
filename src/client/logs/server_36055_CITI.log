@@ -1,0 +1,44 @@
+2014-11-23 06:12:53,411 - Server-6 - Belongs to:CITI
+2014-11-23 06:12:53,412 - Server-6 - Predecessor id:None
+2014-11-23 06:12:53,413 - Server-6 - Sucessor id:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:53,413 - Server-6 - I am the Head !!
+2014-11-23 06:12:53,414 - Server-6 - Life Time: Terminates after 4 received messages
+2014-11-23 06:12:53,470 - Server-6 - Req_id:CITI.1.118 Account:10005 Amount:200 Operation:withdraw
+2014-11-23 06:12:53,471 - Server-6 - Account Not Exists!
+2014-11-23 06:12:53,472 - Server-6 - Creating Account!
+2014-11-23 06:12:53,473 - Server-6 - Received no of messages:1
+2014-11-23 06:12:53,473 - Server-6 - Sent no of messages:1
+2014-11-23 06:12:53,474 - Server-6 - before withdraw operation: Account No:10005 Current Balance:0
+2014-11-23 06:12:53,474 - Server-6 - Status of operation:('invalid', ('CITI.1.118', 10005, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,475 - Server-6 - Update No before forwarding to its successor:1 successor:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:53,500 - Server-6 - Req_id:CITI.1.119 Account:10002 Amount:300 Operation:deposit
+2014-11-23 06:12:53,501 - Server-6 - Account Not Exists!
+2014-11-23 06:12:53,501 - Server-6 - Creating Account!
+2014-11-23 06:12:53,502 - Server-6 - Received no of messages:2
+2014-11-23 06:12:53,503 - Server-6 - Sent no of messages:2
+2014-11-23 06:12:53,503 - Server-6 - before deposit operation: Account No:10002 Current Balance:0
+2014-11-23 06:12:53,504 - Server-6 - Status of operation:('valid', ('CITI.1.119', 10002, 'Processed', 300), 300, ('CITI.1.119', 'D', 300))
+2014-11-23 06:12:53,505 - Server-6 - Update No before forwarding to its successor:2 successor:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:53,509 - Server-6 - Receive ACK - CurrentTrans - Before:[1, 2] Received UpdateNo:1
+2014-11-23 06:12:53,510 - Server-6 - Receive ACK - CurrentTrans - After:[2]
+2014-11-23 06:12:53,542 - Server-6 - Req_id:CITI.1.120 Account:10001 Amount:150 Operation:withdraw
+2014-11-23 06:12:53,542 - Server-6 - Account Not Exists!
+2014-11-23 06:12:53,543 - Server-6 - Creating Account!
+2014-11-23 06:12:53,543 - Server-6 - Received no of messages:3
+2014-11-23 06:12:53,544 - Server-6 - Sent no of messages:3
+2014-11-23 06:12:53,544 - Server-6 - before withdraw operation: Account No:10001 Current Balance:0
+2014-11-23 06:12:53,544 - Server-6 - Status of operation:('invalid', ('CITI.1.120', 10001, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,545 - Server-6 - Update No before forwarding to its successor:3 successor:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:53,548 - Server-6 - Receive ACK - CurrentTrans - Before:[2, 3] Received UpdateNo:2
+2014-11-23 06:12:53,549 - Server-6 - Receive ACK - CurrentTrans - After:[3]
+2014-11-23 06:12:53,563 - Server-6 - Req_id:CITI.1.103 Account:20001 Amount:200 Operation:deposit
+2014-11-23 06:12:53,566 - Server-6 - Account Not Exists!
+2014-11-23 06:12:53,567 - Server-6 - Creating Account!
+2014-11-23 06:12:53,567 - Server-6 - Received no of messages:4
+2014-11-23 06:12:53,568 - Server-6 - Sent no of messages:4
+2014-11-23 06:12:53,569 - Server-6 - ['transfer', 'TCFU']
+2014-11-23 06:12:53,570 - Server-6 - Now serving transfer request from TCFU as deposit request
+2014-11-23 06:12:53,571 - Server-6 - before deposit operation: Account No:20001 Current Balance:0
+2014-11-23 06:12:53,572 - Server-6 - Status of operation:('valid', ('CITI.1.103', 20001, 'Processed', 200), 200, ('CITI.1.103', 'D', 200))
+2014-11-23 06:12:53,573 - Server-6 - Update No before forwarding to its successor:4 successor:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:12:53,574 - Server-6 - I am Dead !!

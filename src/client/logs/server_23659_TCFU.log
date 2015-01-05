@@ -1,0 +1,83 @@
+2014-11-23 06:12:53,381 - Server-2 - Belongs to:TCFU
+2014-11-23 06:12:53,382 - Server-2 - Predecessor id:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,382 - Server-2 - Sucessor id:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,384 - Server-2 - Life Time: Server never terminates!
+2014-11-23 06:12:53,413 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,414 - Server-2 - Req id :CITI.1.100
+2014-11-23 06:12:53,416 - Server-2 - Update No This Server has received:1
+2014-11-23 06:12:53,416 - Server-2 - Account Not Exists!
+2014-11-23 06:12:53,417 - Server-2 - Creating Account!
+2014-11-23 06:12:53,417 - Server-2 - Received no of messages:1
+2014-11-23 06:12:53,418 - Server-2 - Sent no of messages:1
+2014-11-23 06:12:53,418 - Server-2 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,418 - Server-2 - After updating: Account No:10001 Current Balance:500
+2014-11-23 06:12:53,419 - Server-2 - Status of operation  23659:('valid', ('CITI.1.100', 10001, 'Processed', 500), 500, ('CITI.1.100', 'D', 500))
+2014-11-23 06:12:53,420 - Server-2 - Update No before forwarding to its successor:1 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,434 - Server-2 - Receive ACK - CurrentTrans - Before:[1] Received UpdateNo:1
+2014-11-23 06:12:53,435 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,436 - Server-2 - Send ACK for update no 1 to ('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,444 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,446 - Server-2 - Req id :CITI.1.101
+2014-11-23 06:12:53,447 - Server-2 - Update No This Server has received:2
+2014-11-23 06:12:53,448 - Server-2 - Account Not Exists!
+2014-11-23 06:12:53,449 - Server-2 - Creating Account!
+2014-11-23 06:12:53,449 - Server-2 - Received no of messages:2
+2014-11-23 06:12:53,450 - Server-2 - Sent no of messages:2
+2014-11-23 06:12:53,450 - Server-2 - Operation is invalid ! Just pass on request ..
+2014-11-23 06:12:53,451 - Server-2 - Status of operation  23659:('invalid', ('CITI.1.101', 10002, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,451 - Server-2 - Update No before forwarding to its successor:2 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,471 - Server-2 - Receive ACK - CurrentTrans - Before:[2] Received UpdateNo:2
+2014-11-23 06:12:53,472 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,473 - Server-2 - Send ACK for update no 2 to ('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,490 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,491 - Server-2 - Req id :CITI.1.103
+2014-11-23 06:12:53,491 - Server-2 - Update No This Server has received:3
+2014-11-23 06:12:53,492 - Server-2 - Account Exists!
+2014-11-23 06:12:53,492 - Server-2 - Received no of messages:3
+2014-11-23 06:12:53,492 - Server-2 - Sent no of messages:3
+2014-11-23 06:12:53,493 - Server-2 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,493 - Server-2 - After updating: Account No:10001 Current Balance:300
+2014-11-23 06:12:53,494 - Server-2 - Status of operation  23659:('valid', ('CITI.1.103', 10001, 'Processed', 300), 300, ('CITI.1.103', 'T', 200))
+2014-11-23 06:12:53,495 - Server-2 - Update No before forwarding to its successor:3 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,634 - Server-2 - Receive ACK - CurrentTrans - Before:[3] Received UpdateNo:3
+2014-11-23 06:12:53,637 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,639 - Server-2 - Send ACK for update no 3 to ('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,646 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,646 - Server-2 - Req id :CITI.1.108
+2014-11-23 06:12:53,647 - Server-2 - Update No This Server has received:4
+2014-11-23 06:12:53,647 - Server-2 - Account Not Exists!
+2014-11-23 06:12:53,648 - Server-2 - Creating Account!
+2014-11-23 06:12:53,648 - Server-2 - Received no of messages:4
+2014-11-23 06:12:53,648 - Server-2 - Sent no of messages:4
+2014-11-23 06:12:53,648 - Server-2 - Operation is invalid ! Just pass on request ..
+2014-11-23 06:12:53,649 - Server-2 - Status of operation  23659:('invalid', ('CITI.1.108', 10005, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,661 - Server-2 - Update No before forwarding to its successor:4 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,672 - Server-2 - Receive ACK - CurrentTrans - Before:[4] Received UpdateNo:4
+2014-11-23 06:12:53,673 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,674 - Server-2 - Send ACK for update no 4 to ('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,679 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,679 - Server-2 - Req id :CITI.1.109
+2014-11-23 06:12:53,680 - Server-2 - Update No This Server has received:5
+2014-11-23 06:12:53,680 - Server-2 - Account Exists!
+2014-11-23 06:12:53,681 - Server-2 - Received no of messages:5
+2014-11-23 06:12:53,681 - Server-2 - Sent no of messages:5
+2014-11-23 06:12:53,682 - Server-2 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,682 - Server-2 - After updating: Account No:10002 Current Balance:300
+2014-11-23 06:12:53,682 - Server-2 - Status of operation  23659:('valid', ('CITI.1.109', 10002, 'Processed', 300), 300, ('CITI.1.109', 'D', 300))
+2014-11-23 06:12:53,683 - Server-2 - Update No before forwarding to its successor:5 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,695 - Server-2 - Receive ACK - CurrentTrans - Before:[5] Received UpdateNo:5
+2014-11-23 06:12:53,696 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,697 - Server-2 - Send ACK for update no 5 to ('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,704 - Server-2 - Request received from its predecessor:('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,705 - Server-2 - Req id :CITI.1.110
+2014-11-23 06:12:53,705 - Server-2 - Update No This Server has received:6
+2014-11-23 06:12:53,706 - Server-2 - Account Exists!
+2014-11-23 06:12:53,706 - Server-2 - Received no of messages:6
+2014-11-23 06:12:53,706 - Server-2 - Sent no of messages:6
+2014-11-23 06:12:53,707 - Server-2 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,707 - Server-2 - After updating: Account No:10001 Current Balance:150
+2014-11-23 06:12:53,707 - Server-2 - Status of operation  23659:('valid', ('CITI.1.110', 10001, 'Processed', 150), 150, ('CITI.1.110', 'W', 150))
+2014-11-23 06:12:53,708 - Server-2 - Update No before forwarding to its successor:6 successor:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,717 - Server-2 - Receive ACK - CurrentTrans - Before:[6] Received UpdateNo:6
+2014-11-23 06:12:53,728 - Server-2 - Receive ACK - CurrentTrans - After:[]
+2014-11-23 06:12:53,729 - Server-2 - Send ACK for update no 6 to ('nafeess-MacBook-Air.local', 34407)

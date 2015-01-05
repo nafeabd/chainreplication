@@ -1,0 +1,40 @@
+2014-11-23 06:12:53,436 - Client-9 - Client id:36426
+2014-11-23 06:12:53,437 - Client-9 - Generating log file:client_36426_CITI.log
+2014-11-23 06:12:53,437 - Client-9 - Bank Name:CITI Reply Wait:10.0 No.Retry:3
+2014-11-23 06:12:53,438 - Client-9 - Request Type:itemized
+2014-11-23 06:12:53,439 - Client-9 - Request Information:getbalance,CITI.1.200,20001
+2014-11-23 06:12:53,439 - Client-9 - Request Information:withdraw,CITI.1.118,10005,200
+2014-11-23 06:12:53,440 - Client-9 - Request Information:deposit,CITI.1.119,10002,300
+2014-11-23 06:12:53,440 - Client-9 - Request Information:withdraw,CITI.1.120,10001,150
+2014-11-23 06:12:53,441 - Client-9 - Request Information:deposit,CITI.1.137,10002,300
+2014-11-23 06:12:53,441 - Client-9 - Request Information:withdraw,CITI.1.138,10001,150
+2014-11-23 06:12:53,442 - Client-9 - Request Information:deposit,CITI.1.139,10001,600
+2014-11-23 06:12:53,443 - Client-9 - Request Information:withdraw,CITI.1.140,10001,200
+2014-11-23 06:12:53,445 - Client-9 - Request to Server: Operation:getbalance  account_no:20001  req_id:CITI.1.200  amount:None
+2014-11-23 06:12:53,447 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:12:53,463 - Client-9 - Reply from Server :('CITI.1.200', 20001, 'Processed', 0) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:12:53,464 - Client-9 - Request to Server: Operation:withdraw  account_no:10005  req_id:CITI.1.118  amount:200
+2014-11-23 06:12:53,465 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,493 - Client-9 - Reply from Server :('CITI.1.118', 10005, 'InsufficientFunds', 0) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:12:53,494 - Client-9 - Request to Server: Operation:deposit  account_no:10002  req_id:CITI.1.119  amount:300
+2014-11-23 06:12:53,495 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,536 - Client-9 - Reply from Server :('CITI.1.119', 10002, 'Processed', 300) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:12:53,537 - Client-9 - Request to Server: Operation:withdraw  account_no:10001  req_id:CITI.1.120  amount:150
+2014-11-23 06:12:53,538 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,560 - Client-9 - Reply from Server :('CITI.1.120', 10001, 'InsufficientFunds', 0) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:12:53,564 - Client-9 - Request to Server: Operation:deposit  account_no:10002  req_id:CITI.1.137  amount:300
+2014-11-23 06:12:53,567 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:59,553 - Client-9 - Head Failed,Set new head to:('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:13:03,569 - Client-9 - Oops Timeout.. resending for:ops:deposit account_no:10002 req_id:CITI.1.137 amount:300
+2014-11-23 06:13:03,570 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:13:03,584 - Client-9 - Reply from Server :('CITI.1.137', 10002, 'Processed', 600) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:13:03,585 - Client-9 - Request to Server: Operation:withdraw  account_no:10001  req_id:CITI.1.138  amount:150
+2014-11-23 06:13:03,587 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:13:03,600 - Client-9 - Reply from Server :('CITI.1.138', 10001, 'InsufficientFunds', 0) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:13:03,601 - Client-9 - Request to Server: Operation:deposit  account_no:10001  req_id:CITI.1.139  amount:600
+2014-11-23 06:13:03,602 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:13:03,620 - Client-9 - Reply from Server :('CITI.1.139', 10001, 'Processed', 600) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:13:03,621 - Client-9 - Request to Server: Operation:withdraw  account_no:10001  req_id:CITI.1.140  amount:200
+2014-11-23 06:13:03,623 - Client-9 - Send request to :('nafeess-MacBook-Air.local', 37082)
+2014-11-23 06:13:03,637 - Client-9 - Reply from Server :('CITI.1.140', 10001, 'Processed', 400) Server Info:('nafeess-MacBook-Air.local', 34035)
+2014-11-23 06:13:03,639 - Client-9 - Client Terminating .. all requests served!
