@@ -8,8 +8,7 @@ import threading
 from threading import Thread
 from time import sleep
 import os.path
-from datetime import datetime
-#from _thread import start_new_thread
+
 class Master(process):
 	def setup(server_bank_chain,client_bank_chain):
 		self.master_id = self.id._address[1]
@@ -18,8 +17,9 @@ class Master(process):
 		self.chain_extension = False
 		self.chain_extn_bank = None
 		self.sleep_time = 15
-	def main():
-		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
+
+	def run():		
+		logpath = './logs'
 		logfile = 'master_'+str(master_id)+'.log'
 		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
@@ -30,9 +30,9 @@ class Master(process):
 		ch.setLevel(logging.CRITICAL)
 		ch.setFormatter(formatter)
 		logger.addHandler(ch)
-		logger.critical('Initial Server Bank Chain:'+str(server_bank_chain))
+		logger.info('Initial Server Bank Chain:'+str(server_bank_chain))
 		reset_list()
-		#Special thread to notice chain extension progress
+		#Special thread to monitor chain extension progress
 		thread = Thread(name='thread_check',target = check_extn, args = ())
 		thread.start()
 
@@ -41,7 +41,7 @@ class Master(process):
 			if (await(False)):pass
 			elif timeout(3):				
 				#see the state of active server list .
-				logger.critical('Active_server_list:'+str(active_server_list))
+				logger.info('Active_server_list:'+str(active_server_list))
 				for i in active_server_list:
 					for index,j in enumerate(active_server_list[i]):
 						if j == 0:
@@ -51,12 +51,10 @@ class Master(process):
 				if status != 'failed':
 					logger.info('All Servers Active!!:'+str(active_server_list))
 					reset_list()
-					#logger.critical('Reset the Server states!!:'+str(active_server_list))
 				else:
 					logger.critical('Oops Some thing bad happend!!:'+str(active_server_list))	
 					handle_failure(fail_server_bank,fail_server_index)
-					reset_list()
-						
+					reset_list()			
 	def handle_failure(bankname,server_index):
 		#Decide which server is failed i.e head,tail or internal server
 		if server_index == 0:
@@ -68,22 +66,22 @@ class Master(process):
 				logger.info('Remove Head from the list:'+str(server_bank_chain[bankname][server_index]))
 				del server_bank_chain[bankname][server_index]
 				logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
-				logger.info('You are now head to!'+str(newhead))				
+				logger.critical('You are now head to!'+str(newhead))				
 				send(('notify_head',),to=newhead)
-				logger.info('new  head notification to following clients!'+str(client_bank_chain[bankname]))
+				logger.critical('new  head notification to following clients!'+str(client_bank_chain[bankname]))
 				send(('NewHead',newhead),to=client_bank_chain[bankname])
 
 		elif server_index == len(server_bank_chain[bankname]) - 1:
 			#Tail failed
 			logger.critical('Tail Failed:'+str(server_bank_chain[bankname][server_index]))
 			newtail = server_bank_chain[bankname][server_index-1]
-			logger.info('Remove Tail from the list:'+str(server_bank_chain[bankname][server_index]))
+			logger.critical('Remove Tail from the list:'+str(server_bank_chain[bankname][server_index]))
 			del server_bank_chain[bankname][server_index]
 			logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
-			logger.info('You are now tail to!'+str(newtail))
+			logger.critical('You are now tail to!'+str(newtail))
 			send(('notify_tail',),to=newtail)
 			logger.info('new tail notification to following clients!'+str(client_bank_chain[bankname]))
-			send(('NewTail',newtail),to=client_bank_chain[bankname])
+			send(('NewTail',newtail,'tail_failed'),to=client_bank_chain[bankname])
 		else:
 			#Internal server failed
 			logger.critical('Internal Server Failed:'+str(server_bank_chain[bankname][server_index]))
@@ -91,7 +89,7 @@ class Master(process):
 				s_plus = server_bank_chain[bankname][server_index+1]
 			if server_bank_chain[bankname][server_index-1] is not None:
 				new_predecessor = s_minus = server_bank_chain[bankname][server_index-1]
-			logger.info('Remove failed server from the list:'+str(server_bank_chain[bankname][server_index]))
+			logger.critical('Remove failed server from the list:'+str(server_bank_chain[bankname][server_index]))
 			del server_bank_chain[bankname][server_index]
 			logger.info('New Chain Structure :'+str(server_bank_chain[bankname]))
 			#Inform S+ about S's failure and ask for it's latest update
@@ -100,23 +98,23 @@ class Master(process):
 			t = logical_clock()
 			#Check here
 			if await(some(received(('Lastupdate',last_update,time), from_=s_plus),has=(t<time))):
-				logger.info('Send last update that S+ has served to s-minus->'+'Lastupdate:'+str(last_update)+' S-:'+str(s_minus))
+				logger.critical('Send last update that S+ has served to s-minus->'+'Lastupdate:'+str(last_update)+' S-:'+str(s_minus))
 				send(('S-crash-to-S-',last_update,s_plus),to=s_minus)
 				break
 	
 			elif timeout(10):
 				logger.critical('Some thing went wrong No reply  from S+ regarding last update..')
 
-	def check_extn():
-		#sleep(0.25)
+	#Below function is executed in a separate thread which continuosly monitors the chain extension progress. From the start
+	#period of chain extension process , it wakes up after sometime and monitor the status , if status still shows up as chain 
+	#extension in progress , it assumes to be a new server failure case and handles appropriately.
+	def check_extn():		
 		while True:
 			if chain_extension == True:
 				logger.info('Chain extension is set True')
-				#do something.
-				#sleep(5)
 				sleep(sleep_time)
 				if chain_extension != False:
-					logger.info('New Server Might have failed ! Initiate graceful abort process to tail:'+str(server_bank_chain[chain_extn_bank][-1]))
+					logger.critical('New Server Might have failed ! Initiate graceful abort process to tail:'+str(server_bank_chain[chain_extn_bank][-1]))
 					send(('abort_chainextension',),to=server_bank_chain[chain_extn_bank][-1])
 					chain_extension,chain_extn_bank = False,None
 
@@ -125,13 +123,11 @@ class Master(process):
 		for name in server_bank_chain:
 			active_server_list[name] = [0 for i in range(len(server_bank_chain[name]))]
 
-	#Receive message from each server	
+	#Receive handler to monitor heart beats from each server.
 	def receive(msg=('Alive',bankname),from_=s):
 		if bankname in server_bank_chain:
 			if s in server_bank_chain[bankname]:				
 				active_server_list[bankname][server_bank_chain[bankname].index(s)] = 1
-
-
 	
 	def receive(msg=('Lastupdate',last_update,time),from_=s):
 		logger.critical('Lastupdate from S-plus:'+str(last_update)+' from:'+str(s))
@@ -141,7 +137,6 @@ class Master(process):
 		chain_extn_bank = bankname
 		sleep_time = 15
 		logger.critical('Join Request from:'+str(s))
-		#Determine tail of respective bank chain
 		curr_tail = server_bank_chain[bankname][-1]
 		logger.critical('curr_tail:'+str(curr_tail))
 		logger.critical('Intimate current tail about this request !'+str(s))
@@ -149,18 +144,36 @@ class Master(process):
 		sleep(3)
 		#sleep(1.5)
 		send(('JoinUpdate_Tail',s),to=curr_tail)
-		
 
+
+
+	#The below receive handler is called during chain extension
 	def receive(msg=('I_am_extended_tail',bankname),from_=s):
 		logger.critical('Chain Extension Success..Now New Tail is:'+str(s))
 		server_bank_chain[bankname].append(s)
 		active_server_list[bankname].append(1)
-		#reset_list()
-		logger.critical('New Server Bank Chain Now:'+str(server_bank_chain[bankname]))
+		logger.info('New Server Bank Chain Now:'+str(server_bank_chain[bankname]))
 		logger.critical('Inform clients of the bank about new tail:'+str(client_bank_chain[bankname]))
-		send(('NewTail',s),to=client_bank_chain[bankname])
+		send(('NewTail',s,'tail_extended'),to=client_bank_chain[bankname])
 		chain_extension = False
 		chain_extn_bank = None
+
+
+	#The below receive handler for sending the head of the requested bank.
+	def receive(msg=('HeadAddr',bank_name),from_=s):
+		logger.critical('Request for Head address for bank:'+str(bank_name)+' from:'+str(s))
+		head = server_bank_chain[bank_name][0]
+		logger.critical('Current Head of '+str(bank_name)+' is'+str(head))
+		send(('Reply_headaddr',head,bank_name,logical_clock()),to=s)
+
+
+
+	#The below receive handler for sending the tail of the requested bank.
+	def receive(msg=('TailAddr',bank_name),from_=s):
+		logger.critical('Request for Tail address for bank:'+str(bank_name)+' from:'+str(s))
+		tail = server_bank_chain[bank_name][-1]
+		logger.critical('Current Tail of '+str(bank_name)+' is'+str(tail))
+		send(('Reply_tailaddr',tail,bank_name,logical_clock()),to=s)
 		
 		
 
@@ -169,9 +182,8 @@ class Client(process):
 	def setup(bankname,reply_wait,num_retry,req_details,head,tail,master):
 		self.client_id = self.id._address[1]
 		self.logger = logging.getLogger()
-	def main():
-		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
-		#Intialize and set properties to logger for logging mechanism
+	def run():		
+		logpath = './logs'
 		logfile = 'client_'+str(client_id)+'_'+bankname+'.log'
 		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
@@ -188,60 +200,76 @@ class Client(process):
 		logging.info('Generating log file:'+logfile)
 		logger.info('Bank Name:'+bankname+' Reply Wait:'+str(reply_wait)+' No.Retry:'+str(num_retry))
 
+		#sending requests based on the type i.e random or itemized
 		if req_details[0] == 'random':
-			seed,numreq,prob_bal,prob_dep,prob_withdraw = req_details[1:]
+			seed,numreq,prob_bal,prob_dep,prob_withdraw,prob_transfer = req_details[1:]
 			logger.info('Request Type:'+req_details[0])
-			logger.info('Seed:'+str(seed)+' NumReq:'+str(numreq)+' Prob_Bal:'+str(prob_bal)+' Prob_Dep:'+str(prob_dep)+' Prob_Withdraw:'+str(prob_withdraw))
+			logger.info('Seed:'+str(seed)+' NumReq:'+str(numreq)+' Prob_Bal:'+str(prob_bal)+' Prob_Dep:'+str(prob_dep)+' Prob_Withdraw:'+str(prob_withdraw)+' Prob_transfer:'+str(prob_transfer))
 			weight = {}
-			weight['getbalance'], weight['deposit'], weight['withdraw']  = int(prob_bal * 100), int(prob_dep * 100), int(prob_withdraw * 100)
+			weight['getbalance'], weight['deposit'], weight['withdraw'],weight['transfer']  = int(prob_bal * 100), int(prob_dep * 100), int(prob_withdraw * 100),int(prob_transfer * 100)
 			choice_list = [s for s in weight for i in range(weight[s])]
+			dest_bank_list = ['TCFU','CITI','BOA']
+			dest_bank_list.remove(bankname)
 			random.seed(seed)
+			logger.info('numreq:'+str(numreq))
 			for i in range(numreq):
 				retry_val = num_retry
 				ops = random.choice(choice_list)
 				seq_no = random.randint(10,100)
 				account_no = random.randint(100000,999999)
 				if ops == 'getbalance':
-					amount = None
-					#server = tail
-				else:
-					#server = head
+					amount,dest_bank,dest_account = None,None,None
+				elif ops == 'transfer':
+					#Generate random destination account no and destination bank ???
+					dest_account = random.randint(100000,999999)
+					dest_bank = random.choice(dest_bank_list)
+					amount = random.randint(1,1000)			
+				else:					
 					amount = random.randint(1,500)
+					dest_bank,dest_account = None,None
 				req_id = '.'.join((bankname,str(client_id),str(seq_no)))
-				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
+				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+
+												'  amount:'+str(amount)+'  dest_bank:'+str(dest_bank)+'  dest_account:'+str(dest_account))
 				while retry_val >= 0:
+					extras = []
 					server = tail if ops == 'getbalance' else head
-					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
+					logger.info('Send request to :'+str(server))
+					send(('FromClient',ops,[account_no,req_id,amount,dest_bank,dest_account],extras), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
 					elif timeout(reply_wait):
-						logger.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+' req_id:'+req_id+' amount:'+str(amount))
+						logger.critical('Oops Timeout.. resending for:'+'ops:'+ops+' account_no:'+str(account_no)+
+								' req_id:'+req_id+' amount:'+str(amount)+'  dest_bank:'+str(dest_bank)+'  dest_account:'+str(dest_account))
 						retry_val -= 1
-				
 		else:
 			requests = req_details[1:]
 			logger.info('Request Type:'+req_details[0])
 			for req in requests:
 				logger.info('Request Information:'+str(req))
 			for req in requests:
+				transfer = False
 				retry_val = num_retry
 				if len(req.strip().split(',')) == 3:
 					ops,req_id,account_no = req.strip().split(',')
-					amount = None
-					account_no = int(account_no)
-					#server = tail
+					amount,dest_bank,dest_account = None,None,None
+					account_no = int(account_no)	
+				elif len(req.strip().split(',')) == 6:
+					ops,req_id,account_no,amount,dest_bank,dest_account = req.strip().split(',')
+					amount,account_no,dest_account = int(amount),int(account_no),int(dest_account)
+					transfer = True
+										
 				else:
 					ops,req_id,account_no,amount = req.strip().split(',')
-					amount,account_no = int(amount),int(account_no)
-					#server = head
-				logging.critical('Request to Server: Operation:'+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+'  amount:'+str(amount))
+					dest_bank,dest_account = None,None
+					amount,account_no = int(amount),int(account_no)					
+				logger.critical('Request to Server: Operation: '+ops+'  account_no:'+str(account_no)+'  req_id:'+req_id+
+												'  amount:'+str(amount)+'  dest_bank:'+str(dest_bank)+'  dest_account:'+str(dest_account))
 				while retry_val >= 0:
-					logger.info('time-1:'+str(datetime.now()))
+					extras = []
 					server = tail if len(req.strip().split(',')) == 3 else head
-					logger.info('time-2:'+str(datetime.now()))
 					logger.info('Send request to :'+str(server))
-					send(('FromClient',ops,[account_no,req_id,amount]), to=server)
+					send(('FromClient',ops,[account_no,req_id,amount,dest_bank,dest_account],extras), to=server)
 					t = logical_clock()
 					if await(some(received(('Toclient',reply,time), from_=p), has=(req_id in reply and account_no in reply and t<time))):
 						break
@@ -250,6 +278,7 @@ class Client(process):
 						retry_val -= 1
 		logging.info('Client Terminating .. all requests served!')
 		await(True)
+
 	def receive(msg=('Toclient',reply,time),from_=p):
 		logging.critical('Reply from Server :'+str(reply)+' Server Info:'+str(p))
 	
@@ -257,13 +286,16 @@ class Client(process):
 		logger.critical('Head Failed,Set new head to:'+str(newhead))
 		head = newhead
 
-	def receive(msg=('NewTail',newtail),from_=p):
-		logger.critical('Tail Failed/Extended,Set new tail to:'+str(newtail))
+	def receive(msg=('NewTail',newtail,tail_msg),from_=p):
+		if tail_msg == 'tail_failed':
+			logger.critical('Tail Failed,Set new tail to:'+str(newtail))
+		else:
+			logger.critical('Tail Extended,Set new tail to:'+str(newtail))
 		tail = newtail		
 
 class Server(process):
 	
-	def setup(bankname,startupdelay,serverlifetime,successor,predecessor,master):
+	def setup(bankname,startupdelay,serverlifetime,successor,predecessor,master,failureflag):
 		self.server_id = self.id._address[1]
 		self.account_details = {}
 		self.send_msg_no = 0
@@ -272,12 +304,13 @@ class Server(process):
 		self.currentTrans = []
 		self.updateno = 0
 		self.joinrequest,self.extendingOn,self.kill_server = False,False,False
+		self.dest_heads = {}
+		self.src_tails = {}
 
-	def main():
-		logpath = '/Users/NafeesAhmed/Documents/async_project/chainreplication/logs'
-		#Logging init setup , Different log levels for files and consoles
-		logfile = 'server_'+str(server_id)+'.log'
-		#fh = logging.FileHandler(logfile)
+	def run():		
+		logpath = './logs'		
+		#logfile = 'server_'+str(server_id)+'.log'
+		logfile = 'server_'+str(server_id)+'_'+bankname+'.log'	
 		fh = logging.FileHandler(os.path.join(logpath,logfile))
 		formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')		
 		fh.setFormatter(formatter)
@@ -305,7 +338,7 @@ class Server(process):
 			try_count = 2
 			logger.critical('New Server:'+str(self))
 			#Back Up Server sleeps for some time before sending join request to master
-			sleep(0.5)
+			sleep(startupdelay)
 			while try_count != 0 :
 				logger.info('I want to join the chain to master:'+str(master))				
 				send(('Join_Request',bankname),to=master)
@@ -331,26 +364,27 @@ class Server(process):
 		if kill_server == True:
 			halt_extn.set()			
 		elif serverlifetime[0] == 'receive':
-			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')
-			count = int(serverlifetime[1])			
-			await(((len(listof(p, received(('FromClient',ops,values), from_=p)))) + (len(listof(p, received(('FromServer',latestupno,account_no,status,client), from_=p))))) >= count)
-			
+			logger.info('Life Time:'+' Terminates after ' + str(serverlifetime[1])+' received messages')					
+			await(((len(listof(p, received(('FromClient',ops,values,extras), from_=p)))) + (len(listof(p, received(('FromServer',latestupno,account_no,status,client,dest_bank,dest_account,extras), from_=p))))) >= int(serverlifetime[1]))
 		elif serverlifetime[0] == 'send':
 			logger.info('Life Time:'+' Terminates after '+str(serverlifetime[1])+' send messages')
 			count = int(serverlifetime[1])
-			await((len(listof(status, sent(('Toclient',status,time), to=p))) + len(listof(status, sent(('FromServer',latestupno,account_no,status,client), to=p)))) >= count)			
+			await((len(listof(status, sent(('Toclient',status,time), to=p)))) >= int(serverlifetime[1]))											
 		else:
 			logger.info('Life Time: Server never terminates!')
 			await(False)
 		halt.set()
 		logger.critical('I am Dead !!')
-	
+
+
+	#sending ping request to master
 	def ping_master(event):		
 		while not event.is_set():		
 			send(('Alive',bankname),to=master)
 			sleep(1)
-		logger.critical('Kill thread!!!')			
-	
+		logger.info('Kill thread!!!')
+
+	#this method is used during chain extension	for killing the server afer server life time		
 	def set_state(event,check_type,count):
 		while not event.is_set():						
 			if check_type == 'send': 
@@ -362,11 +396,14 @@ class Server(process):
 					kill_server = True
 
 
-	#Receive from client
-	def receive(msg=('FromClient',ops,values),from_=p):
+	
+	# Below receive handler performs: 
+	# 1.The role of head and receives requests from clients and performs various operations
+	# 2.Forwards the updates to the chain 
+	def receive(msg=('FromClient',ops,values,extras),from_=p):
 		logger = logging.getLogger()
-		account_no,req_id,amount = values
-		logger.info('Req_id:'+str(req_id)+' Account:'+str(account_no)+' Amount:'+str(amount)+' Operation:'+ops)
+		account_no,req_id,amount,dest_bank,dest_account = values
+		logger.critical('Req_id:'+str(req_id)+' Account:'+str(account_no)+' Amount:'+str(amount)+' Operation:'+ops)
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
 		receive_msg_no +=1
@@ -380,6 +417,8 @@ class Server(process):
 			send(('Toclient',reply,logical_clock()),to=p)			
 
 		elif ops == 'deposit':
+			if len(extras) > 0:
+				logging.critical('Now serving '+str(extras[0])+' request from '+str(extras[1])+' as deposit request')	
 			logging.info('before deposit operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
 			status = deposit(req_id,account_no,amount)
 			logging.critical('Status of operation:'+str(status))
@@ -389,6 +428,12 @@ class Server(process):
 			status = withdraw(req_id,account_no,amount)
 			logging.critical('Status of operation:'+str(status))
 
+		elif ops == 'transfer':
+			logging.info('before transfer operation: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
+			status = transfer(req_id,account_no,amount,dest_bank,dest_account)
+			logging.critical('Status of operation:'+str(status))
+
+
 		if successor is None and ops != 'getbalance':
 			logging.info('send reply to client:'+str(p))
 			send(('Toclient',status[1],logical_clock()),to=p)
@@ -396,15 +441,24 @@ class Server(process):
 
 		elif ops != 'getbalance':
 			updateno += 1
-			logging.info('Update No before forwarding to its successor:'+str(updateno)+' successor:'+str(successor))
-			send(('FromServer',updateno,account_no,status,p),to=successor)
-			currentTrans.append((updateno,account_no,status,p))
+			if len(extras) > 0 and extras[0] == 'transfer' and failureflag == 'Yes':
+					#Kill this server
+					serverlifetime[1] = 0
+					logging.info('Server about to terminate..')
+			else:		
+				logging.info('Update No before forwarding to its successor:'+str(updateno)+' successor:'+str(successor))
+				send(('FromServer',updateno,account_no,status,p,dest_bank,dest_account,extras),to=successor)
+			currentTrans.append((updateno,account_no,status,p,dest_bank,dest_account,extras))
 			
 				
-	#receive from another server
-	def receive(msg=('FromServer',latestupno,account_no,status,client),from_=s):
+	# Below receive handles requests coming from other servers and performs operations
+	# and acknowledges client about request status
+	# Based on certain type of operations like chain extension/Transfer, it behaves accordingly
+	def receive(msg=('FromServer',latestupno,account_no,status,client,dest_bank,dest_account,extras),from_=s):
 		logging.info('Request received from its predecessor:'+str(predecessor))
-		logging.info('Req id :'+str(status[1][0]))
+		logging.critical('Req id :'+str(status[1][0])+' updateno: '+str(latestupno)+' account_no:'+str(account_no)+' status at its predecessor:'+str(status))
+		if dest_bank is not None:
+			logger.critical('dest_bank:'+str(dest_bank)+' dest_account:'+str(dest_account))
 		logging.info('Update No This Server has received:'+str(latestupno))		
 		if isAccountExists(account_no) is False:
 			createAccount(account_no)
@@ -418,35 +472,158 @@ class Server(process):
 			current_account.balance = status[2]
 			current_account.processedTrans.append(status[3])			
 			logger.info('After updating: Account No:'+str(account_no)+' Current Balance:'+str(self.account_details[account_no].balance))
-		else:
-			logging.info('Operation is invalid ! Just pass on request ..')
 
-		#in case status not valid , just pass on to other servers
 		logger.critical('Status of operation  '+str(server_id) +':'+str(status))
 		updateno = latestupno
 		if successor is None:			
 			if joinrequest == True:
 				logger.critical('Join request is true so add requests to currentTrans')
-				currentTrans.append((updateno,account_no,status,client))
+				currentTrans.append((updateno,account_no,status,client,dest_bank,dest_account,extras))
 			if extendingOn == True:
 				logger.critical('Chain extension is Progress , Dont sent reply to client - current client had already did that!)')
-			else:
-				logging.info('Send reply to client:'+str(client))
+
 			if extendingOn != True:
-				send(('Toclient',status[1],logical_clock()),to=client)				
-				#Check
-			logger.info('Send ACK for update no '+str(updateno)+' to '+str(predecessor))
-			send(('Ack',updateno),to=predecessor)
+
+				#Check if current request is transfer or not.
+				if dest_bank is  None and dest_account is  None:
+					#Request is transfer request in destination(treated as deposit actually) , don't send 
+					#reply to client , instead send to source bank tail.
+
+					if len(extras) == 0:
+						logging.info('Send reply to client:'+str(client))
+						send(('Toclient',status[1],logical_clock()),to=client)
+
+					else:
+						#-----Destination specific code for tail ----------- #
+						logging.info('Do not send reply to client ! Instead reply back to source bank tail:'+str(extras[1]))
+						retry_limit = 2
+						while retry_limit >= 0:
+			
+							if extras[1] not in src_tails:
+								
+								t = logical_clock()
+								logging.info('Request master for tail of bank:'+str(extras[1]))
+								send(('TailAddr',extras[1]),to=master)
+								if await(some(received(('Reply_tailaddr',curr_tail,curr_bank,time), from_=master),has=(extras[1] == curr_bank and t<time))):
+									src_tails[curr_bank] = curr_tail
+									logging.critical('Reply from master - tail of '+str(extras[1])+' is:'+str(curr_tail))
+								elif timeout(2):
+									logger.critical('Seems Master is busy . Sending message again ---!!')
+									continue
+							t = logical_clock()
+							logger.critical('send Transfer OK for:'+str(status[1][0]))
+							send(('Transfer_OK',status[1][0],logical_clock()),to=src_tails[extras[1]])
+							if await(some(received(('Transfer_ACK',request,time), from_=s),has=(status[1][0] == request and t<time))):
+								logger.critical('Acknowledgement from Source bank. Transaction Success for '+str(request))
+								break
+							elif timeout(3):
+								logger.critical('Source Tail Might have failed ! Try resending to New tail')
+								if extras[1] in src_tails:	
+									del src_tails[extras[1]]
+							retry_limit -= 1
+
+					logger.info('Send ACK for update no '+str(updateno)+' to '+str(predecessor))
+					send(('Ack',updateno),to=predecessor)
+
+				#Only when transfer request is processed , send it to other bank.Otherwise just to client	
+				elif dest_bank is not None and dest_account is not None and status[1][2] == 'Processed':
+					logger.critical('This is a Transfer request .Request shoud be forwarded to Destination Bank:'+str(dest_bank))
+					#Only in this case tail will have sent requests stored
+					currentTrans.append((updateno,account_no,status,client,dest_bank,dest_account,extras))
+					#Get destination bank's head address from master
+					retry_limit = 2
+					while retry_limit >= 0:
+						logger.info('retry_limit:'+str(retry_limit))
+						if dest_bank not in dest_heads:
+							logger.critical('Destination banks head not available in our records ! Asking Master')
+							#Get from master
+							t = logical_clock()
+							send(('HeadAddr',dest_bank),to=master)
+							if await(some(received(('Reply_headaddr',curr_head,curr_bank,time), from_=master),has=(dest_bank == curr_bank and t<time))):
+								dest_heads[curr_bank] = curr_head
+								logging.critical('Reply from master - head of '+str(dest_bank)+' is:'+str(curr_head))
+
+							elif timeout(2):
+								logger.critical('Seems Master is busy . Sending message again !!')
+								continue
+						else:
+							logger.info('Destination head available in our records . No need to request master')		
+						t = logical_clock()		
+						#This is not actually from client , but we use existing handler to avoid code duplication
+						#account_no,req_id,amount,dest_bank,dest_account],extras
+						logger.critical('Now forward transfer request '+str(status[3][0])+' to Destination banks head')
+						send(('FromClient','deposit',[dest_account,status[3][0],status[3][2],None,None],['transfer',bankname]), to=dest_heads[dest_bank])
+
+						if failureflag == 'Yes':
+							logger.critical('Failure flag set ! Killing Server ..')
+							serverlifetime[1] = 0
+							break
+
+						if await(some(received(('Transfer_OK',request,time), from_=sp),has=(status[3][0] == request and t<time))):							
+							break
+						elif timeout(3):
+							logger.critical('Destination banks head not responding(might have failed) while processing '+str(status[3][0])+' ,Try resending to new head')	
+							if dest_bank in dest_heads:
+								del dest_heads[dest_bank]
+							retry_limit -= 1		
+
+				else:
+					#Invalid transfer request (source). 
+					logging.info('Send reply to client:'+str(client))
+					send(('Toclient',status[1],logical_clock()),to=client)
+					logger.info('Send ACK for update no '+str(updateno)+' to '+str(predecessor))
+					send(('Ack',updateno),to=predecessor)								
 		else:
 			logging.info('Update No before forwarding to its successor:'+str(updateno)+' successor:'+str(successor))
-			send(('FromServer',updateno,account_no,status,client),to=successor)
-			currentTrans.append((updateno,account_no,status,client))
+			send(('FromServer',updateno,account_no,status,client,dest_bank,dest_account,extras),to=successor)
+			currentTrans.append((updateno,account_no,status,client,dest_bank,dest_account,extras))
+			
+
+	#Source one		
+	def receive(msg=('Transfer_OK',request_id,time),from_=sp):
+		#Find item in tail's currentTrans and reply to client.
+		logger.critical('**Deposit Success from Destination for request id:'+str(request_id)+' Now time to reply back to client')
+		for index,update in enumerate(currentTrans):
+			if update[2][1][0] == request_id and update[2][1][2] == 'Processed':
+				update_no = update[0]
+				client = update[3]
+				status = update[2]
+				logger.critical('Sending reply for this transfer request:'+str(request_id)+' to client:'+str(client))
+				send(('Toclient',status[1],logical_clock()),to=client)
+				logger.critical('Sending ACK to its predecessor:'+str(predecessor))
+				send(('Ack',update_no),to=predecessor)
+				logger.critical('Informing destination banks tail that every thing is OK  for '+str(request_id)+' tail: '+str(sp))
+				send(('Transfer_ACK',request_id,logical_clock()),to=sp)
+				del currentTrans[index]
+				break
+
+	#Destination one	
+	def receive(msg=('Transfer_ACK',request_id,time),from_=p):
+		logging.critical('In receive handler of Transfer_ACK')
+
+	def receive(msg=('Reply_headaddr',curr_head,curr_bank,time)):
+		logger.critical('In receive handler of Reply_headaddr - bank:'+str(curr_bank)+' head:'+str(curr_head))
 
 	def receive(msg=('Ack',updateno),from_=s):
-		updates_before = [item[0] for item in currentTrans]
-		#Remove transactions from currentTrans if updateno is given one or less than given(old  no's)
+		updates_before = [item[0] for item in currentTrans]		
 		logger.critical('Receive ACK - CurrentTrans - Before:'+str(updates_before)+' Received UpdateNo:'+str(updateno))
-		currentTrans = [item for item in currentTrans if item[0] > updateno]
+		flag = 0
+		for update in currentTrans:
+			if update[0] == updateno and update[2][1][2] == 'Processed' and update[2][3][1] == 'T':
+				flag = 1	
+
+		if flag == 1:		
+			currentTrans = [item for item in currentTrans if item[0] > updateno]
+		else:
+				newlist = []
+				for item in currentTrans:
+					if item[0] > updateno:
+						newlist.append(item)
+					elif item[2][1][2] == 'Processed':
+						if item[2][3][1] == 'T':
+							newlist.append(item)			
+				currentTrans = newlist			
+				
 		updates_after = [item[0] for item in currentTrans]
 		logger.critical('Receive ACK - CurrentTrans - After:'+str(updates_after))
 		
@@ -471,7 +648,7 @@ class Server(process):
 		for item in currentTrans:
 			if item[0] > last_update:
 				logger.critical('Send update no that is missing in S+:'+str(item[0]))				
-				send(('FromServer',item[0],item[1],item[2],item[3]),to=newSuccessor)
+				send(('FromServer',item[0],item[1],item[2],item[3],item[4],item[5],item[6]),to=newSuccessor)
 		successor = newSuccessor
 		logger.critical('My new successor is:'+str(successor))
 
@@ -484,17 +661,72 @@ class Server(process):
 	def receive(msg=('notify_tail',),from_=s):
 			logger.info('In receive of Role notification! from:'+str(s))
 			successor = None
+			logger.info('CurrentTrans:'+str(currentTrans))
+			for index,update in enumerate(currentTrans):
+				if update[2][0] == 'valid' and update[2][1][2] == 'Processed' and update[2][3][1] == 'T':
+					logger.critical('**There are Pending transfer requests**'+str(update))
+					dest_bank = update[4]
+					dest_account = int(update[5])
+					request_id = update[2][1][0]
+					transfer_amount = update[2][3][2]
+					retry_limit = 2
+					while retry_limit >= 0:
+						if dest_bank not in dest_heads:
+							logger.critical('Destination head not available in our records ! Ask Master')
+							t = logical_clock()
+							send(('HeadAddr',dest_bank),to=master)
+							if await(some(received(('Reply_headaddr',curr_head,curr_bank,time), from_=master),has=(dest_bank == curr_bank and t<time))):
+								dest_heads[curr_bank] = curr_head
+								logging.critical('Reply from Master - head of '+str(dest_bank)+' is:'+str(curr_head))
+
+							elif timeout(2):
+								logger.critical('Seems Master is too busy . Try Again!')
+								continue
+						t = logical_clock()		
+						logger.critical('Check whether this request is processed at destination bank or not - sending to '+str(dest_heads[dest_bank]))
+						send(('Last_Transfer_Update',request_id,dest_bank,dest_account), to=dest_heads[dest_bank])
+						if await(some(received(('Transfer_Update_Reply',state,request,time), from_=sp),has=(request_id == request and t<time))):
+							if state == 'no':
+								logger.critical('Reply from destination head - This request not processed ! So send transfer request to new head')
+								send(('FromClient','deposit',[dest_account,request_id,transfer_amount,None,None],['transfer',bankname]), to=dest_heads[dest_bank])
+
+							else:
+								logger.info('This Request is already processed . Do Nothing!')
+						
+							break
+						elif timeout(2):
+							logger.critical('Destination Head might have failed , Try resending to new head')	
+							if dest_bank in dest_heads:
+								del dest_heads[dest_bank]
+							retry_limit -= 1
+	
+	def receive(msg=('Last_Transfer_Update',req_id,dest_bank,dest_account),from_=s):
+		#Check if currentTrans contains this request in form of deposit request.
+		logger.critical('In Last_Transfer_Update')
+		flag = False
+		for update in currentTrans:
+			if update[2][1][0] == req_id and update[2][1][2] == 'Processed' and update[2][3][1] == 'D':
+				flag = True
+				break
+
+		if flag == True:
+			status = 'yes'
+			logger.info('I have already processed this reqeust:'+str(req_id)+' Reply back to:'+str(s))
+		else:
+			status = 'no'	
+			logger.info('This request is not processed yet:'+str(req_id)+' Reply back to:'+str(s))
+
+		send(('Transfer_Update_Reply',status,req_id,logical_clock()),to=s)
 
 	#Master -> T: T+ wants to join (Receive handler of current Tail)(for extending chain)
-	def receive(msg=('JoinUpdate_Tail',new_server,),from_=m):
-			#joinrequest = True
+	def receive(msg=('JoinUpdate_Tail',new_server,),from_=m):			
 			logger.info('Chain Extension in Progress ... !'+str(new_server))
 			logger.info('Send Current History to New Server..'+str(new_server))
 			send(('UpdateHistory',account_details),to=new_server)
 			current_updates = [item[0] for item in currentTrans]		
 			logger.critical('Send current updates to new server:'+str(current_updates))
 			for updates in currentTrans:
-				send(('FromServer',updates[0],updates[1],updates[2],updates[3]),to=new_server)			
+				send(('FromServer',updates[0],updates[1],updates[2],updates[3],updates[4],updates[5],updates[6]),to=new_server)			
 			logger.info('All current updates send to new server,Request to End process to new server :'+str(new_server))
 			sleep(0.5)
 			send(('EndExtending',False),to=new_server)			
@@ -506,8 +738,7 @@ class Server(process):
 	#Receive handler for T to set its joinupdate to true . This happens before above receive handler
 	def receive(msg=('SetJoinReq',),from_=m):
 		logger.info('New Server Join Request True [start adding updates to currentTrans]..!!')
-		joinrequest = True
-		#sleep(0.5)
+		joinrequest = True		
 
 	#Receive handler for T+ once extending of chain is almost done
 	def receive(msg=('EndExtending',state),from_=s):			
@@ -522,9 +753,11 @@ class Server(process):
 			account_details = update_history
 			logger.info('Updating History from current tail Done !!'+str(s))
 			curr_ac = []
-			for i in account_details:
-				curr_ac.append(str(i)) 
-			logger.info('These accounts are updated:'+str(curr_ac))
+			if len(account_details) != 0 :
+				logger.info('These accounts are updated:')
+				for i in account_details:
+					logger.info('Account No:'+str(i)+'  Balance:'+str(account_details[i].balance)+' Processed Transactions:'+str(account_details[i].processedTrans))
+					#curr_ac.append([str(i),account_details[i].balance,account_details[i].processedTrans])
 			logger.info('Chain Extension in progress .. Update requests but dont reply to client(current tail already replied)')
 			extendingOn = True
 			logger.info('My new predecessor is :'+str(s))
@@ -550,13 +783,12 @@ class Server(process):
 		current_account = self.account_details[account_no]
 		if verifyTransaction(req_id,'D',account_no,amount) == 1:
 			current_account.balance	+= amount
-			current_account.processedTrans.append((req_id,'D',amount))
-			#current_account.currentTrans.append((req_id,'D',amount))
+			current_account.processedTrans.append((req_id,'D',amount))		
 			status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'D',amount))
 		elif verifyTransaction(req_id,'D',account_no,amount) == -1:
 			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
 		else:
-			status = ('duplicate',(req_id,account_no,'Processed',current_account.balance))
+			status = ('duplicate',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'D',amount))
 
 		return status
 	def withdraw(req_id,account_no,amount):
@@ -566,18 +798,34 @@ class Server(process):
 				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance))
 			else:
 				current_account.balance -= amount
-				current_account.processedTrans.append((req_id,'W',amount))
-				#current_account.currentTrans.append((req_id,'W',amount))
+				current_account.processedTrans.append((req_id,'W',amount))				
 				status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'W',amount))
 		elif verifyTransaction(req_id,'W',account_no,amount) == -1:
 			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
 		else:
-                        status = ('duplicate',(req_id,account_no,'Processed',current_account.balance))
+                        status = ('duplicate',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'W',amount))
 		return status
+
+	#Verify if destination bank exists or not
+
+	def transfer(req_id,account_no,amount,dest_bank,dest_account):
+		current_account = self.account_details[account_no]
+		if verifyTransaction(req_id,'T',account_no,amount) == 1:
+			if current_account.balance < amount:
+				status = ('invalid',(req_id,account_no,'InsufficientFunds',current_account.balance))
+			else:
+				current_account.balance -= amount
+				current_account.processedTrans.append((req_id,'T',amount))				
+				status =  ('valid',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'T',amount))
+		elif verifyTransaction(req_id,'T',account_no,amount) == -1:
+			status =  ('invalid',(req_id,account_no,'InconsistenWithHistory',current_account.balance))
+		else:
+                        status = ('duplicate',(req_id,account_no,'Processed',current_account.balance),current_account.balance,(req_id,'T',amount))
+		return status	
+
 	
 	def verifyTransaction(req_id,ops,account_no,amount):
-		if account_no in self.account_details:
-			#Check - condition may change also may require to check in currentTrans
+		if account_no in self.account_details:			
 			if (req_id,ops,amount) in self.account_details[account_no].processedTrans:
 				return 0
 			elif req_id in [self.account_details[account_no].processedTrans[i][0] for i,j in enumerate(self.account_details[account_no].processedTrans)]:		
@@ -595,7 +843,7 @@ class Server(process):
 			
 	def createAccount(account_no):
 		logging.info('Creating Account!')
-		self.account_details[account_no] = Account(0,[])
+		self.account_details[account_no] = Account(500,[])
 class Account:
 	def __init__(self,balance,processedTrans=[]):
 		self.balance = balance
@@ -611,9 +859,11 @@ class Client_Details:
 
 class Server_Details:
 
-	def __init__(self,startupdelay,serverlifetime):
+	def __init__(self,startupdelay,serverlifetime,failureflags):
 		self.startupdelay = startupdelay
 		self.serverlifetime = serverlifetime
+		self.failureflags = failureflags
+
 
 class Bank_Details:
 	def __init__(self,bankname,chainlen,no_clients,client,server):
@@ -629,6 +879,7 @@ def main():
 	f = open(config_file)
 	lines = f.readlines()
 	request_details = {}
+	failure_flags = []
 	client_no = 0
 	Request_Type = None
 	backup_status = False
@@ -644,7 +895,7 @@ def main():
 				bank_name = line.split(':')[1]	
 			
 			if line.startswith('Start_Up_Delay:'):
-				start_up_delay = line.split(':')[1]
+				start_up_delay = float(line.split(':')[1])
 	
 			if line.startswith('Len_of_chain:'):
                                 chain_len = int(line.split(':')[1])
@@ -654,7 +905,12 @@ def main():
 		
 			if line.startswith('Server_Life_time:'):
 				lifetimes = line.split(':')[1].split(';')
-				server_life_time = [re.sub(r'[()]','',i).split(',')  for i in lifetimes]				
+				server_life_time = [re.sub(r'[()]','',i).split(',')  for i in lifetimes]
+
+			if line.startswith('Failure_Condition:'):
+				matchup = re.search(r'\((.*)\)',line.strip())
+				if matchup:
+					failure_flags = matchup.group(1).strip().split(',')				
 								
 			if line.startswith('reply_wait:'):
                               	reply_wait = float(line.split(':')[1])
@@ -671,11 +927,13 @@ def main():
 			if line.startswith('BackUp_Lifetime:'):
 				bckUpServ_life_time = re.sub(r'[()]','',line.split(':')[1]).split(',')				
 
-			if line.startswith('Random:'):
+			if line.startswith('Random'):
 				Request_Type = 'Random'
 				temp = line.split(':')[1]
-				seed,numReq,probgetbal,probgetdep,probgetwithdraw = re.sub(r'[()]','',temp).strip().split(',')
-				request_details = ['random',int(seed),int(numReq),float(probgetbal),float(probgetdep),float(probgetwithdraw)]
+				seed,numReq,probgetbal,probgetdep,probgetwithdraw,probgettransfer = re.sub(r'[()]','',temp).strip().split(',')				
+				random_req = ['random',int(seed),int(numReq),float(probgetbal),float(probgetdep),float(probgetwithdraw),float(probgettransfer)]				
+				request_details[client_no] = random_req
+				client_no += 1
 
 			if line.startswith('<Itemized_Start'):
 				Request_Type = 'Itemized'
@@ -692,46 +950,43 @@ def main():
 
 			if line.startswith('<Bank-End>'):
 				client = Client_Details(bank_name,reply_wait,num_retry,request_details)
-				server = Server_Details(start_up_delay,server_life_time)
+				server = Server_Details(start_up_delay,server_life_time,failure_flags)
 				bank = Bank_Details(bank_name,chain_len,no_clients,client,server)
 				bank_list.append(bank)
-	f.close()
-	#For Master Process
+				client_no = 0
+				request_details = {}
+				failure_flags = []
+
+	f.close()	
 	bank_server_chain = {}
-	bank_client_chain = {}
-	#Do validation for no of banks
-	#Create client process for each bank
-	master = new(Master,num = 1)
-	#for_testing = [['receive','2'],['unbound'],['unbound']]
+	bank_client_chain = {}		
+	master = new(Master,num = 1)	
 	for item in bank_list:
 		var_count = 0
 		server_list = list(new(Server,num = item.chainlen))
 		bank_server_chain[item.bankname] = server_list
 		for index,server in enumerate(server_list):
-			
-			#Server is Head
+						
 			if index == 0 and len(server_list) > 1:
 				predecessor = None
 				successor = server_list[index+1]
 			elif index == 0 and len(server_list) == 1:
 				predecessor = None
-				successor = None
-			#Server is Tail
+				successor = None			
 			elif index == len(server_list)-1:
 				successor = None
 				predecessor = server_list[index-1]
 			else:
 				predecessor = server_list[index-1]
-				successor = server_list[index+1]
-			#setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime,successor,predecessor,master])
-			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime[var_count],successor,predecessor,master])
+				successor = server_list[index+1]			
+			setup(server,[item.bankname,item.server.startupdelay,item.server.serverlifetime[var_count],successor,predecessor,master,str(item.server.failureflags[var_count])])
 			var_count += 1
 			start(server)
 		client_list = list(new(Client,num = item.no_clients))	
 		bank_client_chain[item.bankname] = client_list
 		for index,client in enumerate(client_list):
 			if Request_Type == 'Random':
-				setup(client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details,server_list[0],server_list[-1],master])
+				setup(client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details[index],server_list[0],server_list[-1],master])
 			else:
 				setup(client,[item.bankname,item.client.reply_wait,item.client.num_retry,item.client.request_details[index],server_list[0],server_list[-1],master])
 			start(client)
