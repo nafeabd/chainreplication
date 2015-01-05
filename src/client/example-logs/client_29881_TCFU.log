@@ -1,0 +1,33 @@
+2014-11-23 06:12:53,393 - Client-5 - Client id:29881
+2014-11-23 06:12:53,394 - Client-5 - Generating log file:client_29881_TCFU.log
+2014-11-23 06:12:53,394 - Client-5 - Bank Name:TCFU Reply Wait:5.0 No.Retry:6
+2014-11-23 06:12:53,395 - Client-5 - Request Type:itemized
+2014-11-23 06:12:53,395 - Client-5 - Request Information:deposit,CITI.1.100,10001,500
+2014-11-23 06:12:53,395 - Client-5 - Request Information:withdraw,CITI.1.101,10002,100
+2014-11-23 06:12:53,396 - Client-5 - Request Information:getbalance,CITI.1.102,10002
+2014-11-23 06:12:53,397 - Client-5 - Request Information:transfer,CITI.1.103,10001,200,CITI,20001
+2014-11-23 06:12:53,397 - Client-5 - Request Information:withdraw,CITI.1.108,10005,200
+2014-11-23 06:12:53,398 - Client-5 - Request Information:deposit,CITI.1.109,10002,300
+2014-11-23 06:12:53,400 - Client-5 - Request Information:withdraw,CITI.1.110,10001,150
+2014-11-23 06:12:53,401 - Client-5 - Request to Server: Operation:deposit  account_no:10001  req_id:CITI.1.100  amount:500
+2014-11-23 06:12:53,402 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,430 - Client-5 - Reply from Server :('CITI.1.100', 10001, 'Processed', 500) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,431 - Client-5 - Request to Server: Operation:withdraw  account_no:10002  req_id:CITI.1.101  amount:100
+2014-11-23 06:12:53,432 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,467 - Client-5 - Reply from Server :('CITI.1.101', 10002, 'InsufficientFunds', 0) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,469 - Client-5 - Request to Server: Operation:getbalance  account_no:10002  req_id:CITI.1.102  amount:None
+2014-11-23 06:12:53,470 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,480 - Client-5 - Reply from Server :('CITI.1.102', 10002, 'Processed', 0) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,481 - Client-5 - Request to Server: Operation:transfer  account_no:10001  req_id:CITI.1.103  amount:200
+2014-11-23 06:12:53,481 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,627 - Client-5 - Reply from Server :('CITI.1.103', 10001, 'Processed', 300) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,631 - Client-5 - Request to Server: Operation:withdraw  account_no:10005  req_id:CITI.1.108  amount:200
+2014-11-23 06:12:53,633 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,668 - Client-5 - Reply from Server :('CITI.1.108', 10005, 'InsufficientFunds', 0) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,670 - Client-5 - Request to Server: Operation:deposit  account_no:10002  req_id:CITI.1.109  amount:300
+2014-11-23 06:12:53,670 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,690 - Client-5 - Reply from Server :('CITI.1.109', 10002, 'Processed', 300) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,691 - Client-5 - Request to Server: Operation:withdraw  account_no:10001  req_id:CITI.1.110  amount:150
+2014-11-23 06:12:53,692 - Client-5 - Send request to :('nafeess-MacBook-Air.local', 34407)
+2014-11-23 06:12:53,715 - Client-5 - Reply from Server :('CITI.1.110', 10001, 'Processed', 150) Server Info:('nafeess-MacBook-Air.local', 23558)
+2014-11-23 06:12:53,728 - Client-5 - Client Terminating .. all requests served!

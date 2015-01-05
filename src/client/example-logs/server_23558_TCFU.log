@@ -1,0 +1,83 @@
+2014-11-23 06:12:53,381 - Server-3 - Belongs to:TCFU
+2014-11-23 06:12:53,382 - Server-3 - Predecessor id:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,383 - Server-3 - Sucessor id:None
+2014-11-23 06:12:53,383 - Server-3 - I am the Tail !!
+2014-11-23 06:12:53,386 - Server-3 - Life Time: Server never terminates!
+2014-11-23 06:12:53,423 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,424 - Server-3 - Req id :CITI.1.100
+2014-11-23 06:12:53,425 - Server-3 - Update No This Server has received:1
+2014-11-23 06:12:53,425 - Server-3 - Account Not Exists!
+2014-11-23 06:12:53,426 - Server-3 - Creating Account!
+2014-11-23 06:12:53,426 - Server-3 - Received no of messages:1
+2014-11-23 06:12:53,426 - Server-3 - Sent no of messages:1
+2014-11-23 06:12:53,427 - Server-3 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,427 - Server-3 - After updating: Account No:10001 Current Balance:500
+2014-11-23 06:12:53,427 - Server-3 - Status of operation  23558:('valid', ('CITI.1.100', 10001, 'Processed', 500), 500, ('CITI.1.100', 'D', 500))
+2014-11-23 06:12:53,428 - Server-3 - Send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,430 - Server-3 - Send ACK for update no 1 to ('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,455 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,456 - Server-3 - Req id :CITI.1.101
+2014-11-23 06:12:53,457 - Server-3 - Update No This Server has received:2
+2014-11-23 06:12:53,458 - Server-3 - Account Not Exists!
+2014-11-23 06:12:53,459 - Server-3 - Creating Account!
+2014-11-23 06:12:53,460 - Server-3 - Received no of messages:2
+2014-11-23 06:12:53,462 - Server-3 - Sent no of messages:2
+2014-11-23 06:12:53,463 - Server-3 - Operation is invalid ! Just pass on request ..
+2014-11-23 06:12:53,463 - Server-3 - Status of operation  23558:('invalid', ('CITI.1.101', 10002, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,464 - Server-3 - Send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,467 - Server-3 - Send ACK for update no 2 to ('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,474 - Server-3 - Req_id:CITI.1.102 Account:10002 Amount:None Operation:getbalance
+2014-11-23 06:12:53,475 - Server-3 - Account Exists!
+2014-11-23 06:12:53,476 - Server-3 - Received no of messages:3
+2014-11-23 06:12:53,476 - Server-3 - Sent no of messages:3
+2014-11-23 06:12:53,477 - Server-3 - before getbalance operation: Account No:10002 Current Balance:0
+2014-11-23 06:12:53,477 - Server-3 - Account Exists!
+2014-11-23 06:12:53,478 - Server-3 - send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,501 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,501 - Server-3 - Req id :CITI.1.103
+2014-11-23 06:12:53,502 - Server-3 - Update No This Server has received:3
+2014-11-23 06:12:53,502 - Server-3 - Account Exists!
+2014-11-23 06:12:53,503 - Server-3 - Received no of messages:4
+2014-11-23 06:12:53,504 - Server-3 - Sent no of messages:4
+2014-11-23 06:12:53,504 - Server-3 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,504 - Server-3 - After updating: Account No:10001 Current Balance:300
+2014-11-23 06:12:53,505 - Server-3 - Status of operation  23558:('valid', ('CITI.1.103', 10001, 'Processed', 300), 300, ('CITI.1.103', 'T', 200))
+2014-11-23 06:12:53,506 - Server-3 - ***control is here:<_MainThread(MainThread, started 140735303471872)>
+2014-11-23 06:12:53,557 - Server-3 - in Reply_headaddr: ('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,557 - Server-3 - Answer from master head of CITI is:('nafeess-MacBook-Air.local', 36055)
+2014-11-23 06:12:53,558 - Server-3 - send transfer req to destination bank
+2014-11-23 06:12:53,625 - Server-3 - Transfer OK from destination . Now reply back to client
+2014-11-23 06:12:53,630 - Server-3 - Send ACK for update no 3 to ('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,664 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,664 - Server-3 - Req id :CITI.1.108
+2014-11-23 06:12:53,665 - Server-3 - Update No This Server has received:4
+2014-11-23 06:12:53,665 - Server-3 - Account Not Exists!
+2014-11-23 06:12:53,665 - Server-3 - Creating Account!
+2014-11-23 06:12:53,666 - Server-3 - Received no of messages:5
+2014-11-23 06:12:53,666 - Server-3 - Sent no of messages:5
+2014-11-23 06:12:53,666 - Server-3 - Operation is invalid ! Just pass on request ..
+2014-11-23 06:12:53,666 - Server-3 - Status of operation  23558:('invalid', ('CITI.1.108', 10005, 'InsufficientFunds', 0))
+2014-11-23 06:12:53,667 - Server-3 - Send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,669 - Server-3 - Send ACK for update no 4 to ('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,685 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,686 - Server-3 - Req id :CITI.1.109
+2014-11-23 06:12:53,687 - Server-3 - Update No This Server has received:5
+2014-11-23 06:12:53,687 - Server-3 - Account Exists!
+2014-11-23 06:12:53,687 - Server-3 - Received no of messages:6
+2014-11-23 06:12:53,687 - Server-3 - Sent no of messages:6
+2014-11-23 06:12:53,688 - Server-3 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,688 - Server-3 - After updating: Account No:10002 Current Balance:300
+2014-11-23 06:12:53,688 - Server-3 - Status of operation  23558:('valid', ('CITI.1.109', 10002, 'Processed', 300), 300, ('CITI.1.109', 'D', 300))
+2014-11-23 06:12:53,689 - Server-3 - Send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,691 - Server-3 - Send ACK for update no 5 to ('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,710 - Server-3 - Request received from its predecessor:('nafeess-MacBook-Air.local', 23659)
+2014-11-23 06:12:53,711 - Server-3 - Req id :CITI.1.110
+2014-11-23 06:12:53,711 - Server-3 - Update No This Server has received:6
+2014-11-23 06:12:53,711 - Server-3 - Account Exists!
+2014-11-23 06:12:53,712 - Server-3 - Received no of messages:7
+2014-11-23 06:12:53,712 - Server-3 - Sent no of messages:7
+2014-11-23 06:12:53,712 - Server-3 - Operation is valid so update its internal data structures
+2014-11-23 06:12:53,712 - Server-3 - After updating: Account No:10001 Current Balance:150
+2014-11-23 06:12:53,713 - Server-3 - Status of operation  23558:('valid', ('CITI.1.110', 10001, 'Processed', 150), 150, ('CITI.1.110', 'W', 150))
+2014-11-23 06:12:53,713 - Server-3 - Send reply to client:('nafeess-MacBook-Air.local', 29881)
+2014-11-23 06:12:53,715 - Server-3 - Send ACK for update no 6 to ('nafeess-MacBook-Air.local', 23659)
