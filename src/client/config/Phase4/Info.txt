@@ -1,0 +1,26 @@
+
+PROGRAMMING LANGUAGE :  Dist Algo [1.0.0b10 distribution]
+
+INSTRUCTIONS:
+
+COMPILING THE CODE in DIST ALOG:
+
+The programming language used is Dist Algo . The program can be executed by either by installing dist Algo or directly using by dist algo compiler ‘dar’
+Once setup is ready , use below command to execute my code.
+
+Ways of executing my code:
+1)python3 -m da chainreplication.da [INPUT CONFIG FILE]
+2)<DAROOT>/bin/dar chainreplication.da [INPUT CONFIG FILE]
+
+FILES:
+------
+
+Dist Algo:
+
+One main file : chainreplication.da
+Config files are specified in ~/config folder 
+and respective log files are generated into log folder of current working directory.
+
+BUGS AND LIMITATIONS: In Dist Algo , Simulation of specific test cases involve handling specific timing issues and these timings depends on various external parameters like CPU computation speed and RAM capabilities . At specific times , there may be need to execute same/slightly different configuration file(Not our program file) to simulate specific test cases(especially involved with failure of servers) . Being said that regardless of timing sensitivity the algorithm works efficiently and handles all cases appropriately.
+
+

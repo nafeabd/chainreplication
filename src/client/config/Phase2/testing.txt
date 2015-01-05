@@ -1,0 +1,34 @@
+config_test.config
+This config file contains test cases for server/client creations for different banks.
+
+config_random.conf
+This config file contains test cases to generate itemized requests.
+
+config_itemized.conf
+This config file is test case for itemized requests specified for each client. In this we have all successful
+query and update requests.
+
+config_itemized_isf.conf
+This config file is test case for Insufficient funds requests scenario specified for each client. In this we have all successful
+query and update requests.
+
+config_itemized_ich.conf
+This config file is test case for InconsitencyWithHistory requests scenerio specified by a client.
+
+config_itemized_dup.conf
+This config file is test case for duplicate requests scenerio specified by a client.
+
+config_resend.conf
+This config file is test case for retransmit request by a client when server life time expires.More specially this case
+is when server terminates after receiving n messages.
+
+config_resend1.conf
+This config file is test case for retransmit request by a client when server life time expires.More specially this case
+is when server terminates after sending n messages.
+
+Note:The implementation can take any number of banks and clients as per config file . There is no 
+limitation to the number . But to analyse test cases are specific to limited servers/clients.
+
+Also some other backup config files as required.
+
+

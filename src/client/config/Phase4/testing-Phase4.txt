@@ -1,0 +1,38 @@
+/*
+ *  PHASE 4: FAULT-TOLERANT SERVICE with Transfer Operation
+ *  
+ *	TEAM MEMBERS: 
+ *  GAUTHAM REDDY KUNTA ID: 109596312
+ *  NAFEES AHMED ABDUL ID: 109595182
+ *
+ */
+
+In all the test cases there are 3 banks and 6 client per bank.
+
+transfer_testcase0.conf :-
+----------------------------
+		This config file is test case for handling both duplicate transfer request 
+		i.e. if a duplicate transfer request is is sent we send the same reply 
+		rather than processing it again and insufficient funds case. 
+
+
+transfer_testcase1.conf :-
+----------------------------
+		This config file is test case for showing all successful transfer request which consist
+		of other random requests along with transfer requests.
+
+
+
+transfer_testcase2.conf :-
+----------------------------
+		This config file is test case for handling transfer request such that destination bank head
+		fails after receiving the transfer request from source bank.
+
+
+
+transfer_testcase3.conf :-
+----------------------------
+		This config file is test case for handling transfer request such that both the banks head
+		fail. In this case the new heads in both the banks chain complete the transfer request.
+
+		

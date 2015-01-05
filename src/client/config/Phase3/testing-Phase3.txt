@@ -1,0 +1,36 @@
+config_headfailure.config
+This config file contains test cases for head failure.
+
+config_tailfailure.conf
+This config file contains test cases for tail failure.
+
+config_internalfailure1.conf
+This config file contains test case for internal server failure(S)
+
+Similar configs:config_internalfailure1a.conf
+
+config_internalfailure2.conf
+This config file contains test case for internal server failure(S) and failure of S- after sending updates to S+
+
+Similar configs:config_internalfailure2a.conf
+
+config_internalfailure3.conf
+This config file contains test case for internal server failure(S) and failure of S+ after receiving updates from S-
+
+Similar configs:config_internalfailure3a.conf
+
+config_chainextension1.conf
+This config file is test case for extending chain when new server wants to join the chain
+
+Similar configs:config_chainextension1a.conf,config_chainextension1b.conf
+
+
+config_chainextension2.conf
+This config file is test case when current tail fails during process of chain extension.
+
+Similar configs:config_chainextension2a.conf,config_chainextension2b.conf
+
+config_chainextension3.conf
+This config file is test case when new server fails during process of chain extension.
+
+Similar configs:config_chainextension3a.conf,config_chainextension3b.conf
